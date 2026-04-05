@@ -5,6 +5,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Cuenta } from "@/pages/Cuenta";
+import { Reels } from "@/pages/Reels";
+import { ReelDetail } from "@/pages/ReelDetail";
+import { Competidores } from "@/pages/Competidores";
+import { AccaiAI } from "@/pages/AccaiAI";
+import { Plan90D } from "@/pages/Plan90D";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,7 +28,11 @@ function Router() {
           <Redirect to="/cuenta" />
         </Route>
         <Route path="/cuenta" component={Cuenta} />
-        {/* Add more routes here */}
+        <Route path="/reels" component={Reels} />
+        <Route path="/reels/:id" component={ReelDetail} />
+        <Route path="/competidores" component={Competidores} />
+        <Route path="/accai-ai" component={AccaiAI} />
+        <Route path="/plan-90d" component={Plan90D} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
