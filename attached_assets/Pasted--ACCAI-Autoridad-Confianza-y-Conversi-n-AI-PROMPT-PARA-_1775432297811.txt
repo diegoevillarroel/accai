@@ -1,0 +1,419 @@
+# ACCAI — Autoridad, Confianza y Conversión AI
+# PROMPT PARA AGENTE DE REPLIT — VERSIÓN DEFINITIVA
+
+Do not ask clarifying questions. Do not explain what you're about to do. Execute directly. Start with the Prisma schema, then layout, then modules in order.
+
+Build a full-stack web application called ACCAI — Autoridad, Confianza y Conversión AI. This is a personal content intelligence system for a Venezuelan e-commerce operator. Private tool, no authentication library needed — simple password gate.
+
+---
+
+## TECH STACK
+
+- Next.js 14 App Router (standalone project, NOT integrated into any existing codebase)
+- PostgreSQL with Prisma ORM (EXTERNAL database — Railway PostgreSQL)
+- Tailwind CSS
+- Claude API (model: claude-sonnet-4-20250514 — hardcoded, no model toggle)
+- Password gate: if localStorage has token "vc_accai_ok", show app. Otherwise show password screen. Password: "villaclub2026"
+
+CRITICAL: The DATABASE_URL environment variable points to an EXTERNAL Railway PostgreSQL instance. Do NOT attempt to install or configure PostgreSQL locally. Prisma connects to the external DB via DATABASE_URL. The ANTHROPIC_API_KEY environment variable must also be set. Confirm both exist before running any migrations.
+
+---
+
+## DESIGN SYSTEM — FOLLOW EXACTLY
+
+- Background: #080808
+- Primary accent: #0C2DF5
+- Text primary: #F0F0F0
+- Text secondary: #666666
+- Borders: #1A1A1A
+- Danger/alert: #FF2D20
+- Success: #00CC66
+- Font headings: Space Mono (Google Fonts)
+- Font body/data: Inter (Google Fonts)
+- Zero border-radius on ALL elements (cards, inputs, buttons, modals)
+- No shadows anywhere — borders only
+- The string "//" appears before every section title
+- All buttons: solid #0C2DF5, white text, no radius, uppercase, letter-spacing 0.1em
+- Tables: dark rows alternating #0D0D0D and #111111, left-aligned, monospace numbers
+- Empty states: "//" icon + "Sin datos registrados" centered, in #666666
+
+---
+
+## NAVIGATION
+
+Left sidebar, fixed, width 240px. Background #080808, right border 1px #1A1A1A.
+
+Top of sidebar:
+- "ACCAI™" in Space Mono, white, 20px
+- Below: "// VILLACLUB" in #0C2DF5, 11px, uppercase, letter-spacing 0.15em
+
+Five nav items with simple icons (use Lucide React):
+1. CUENTA (BarChart3)
+2. REELS (Film)
+3. COMPETIDORES (Eye)
+4. ACCAI AI (Cpu)
+5. PLAN 90D (Calendar)
+
+Active item: #0C2DF5 left border 3px + text in #0C2DF5. Inactive: #666666.
+
+---
+
+## MODULE 1 — CUENTA
+
+### Top row: 4 stat cards in a CSS grid (4 columns)
+Each card: border 1px #1A1A1A, padding 24px.
+- Views totales (últimos 30 días)
+- Seguidores ganados
+- Visitas al perfil
+- Conversión perfil→seguidor (calculated: seguidores / visitas * 100, show as percentage with 1 decimal)
+
+Cards pull data from the most recent account_snapshots record.
+
+### Below: form "// ACTUALIZAR PERÍODO"
+Fields:
+- Período inicio (date input)
+- Período fin (date input)
+- Views (number)
+- Seguidores ganados (number)
+- Visitas al perfil (number)
+
+Button: "GUARDAR PERÍODO". On save, calculate conversion % server-side and store.
+
+### Below: history table
+All past periods, newest first.
+Columns: Período | Views | Seguidores | Visitas | Conversión%
+
+### Below: textarea "// DIRECTIVA ESTRATÉGICA ACTUAL"
+Full width. No character limit.
+Placeholder: "Define el foco estratégico actual: qué estás priorizando, qué métricas importan, qué estás lanzando."
+Button: "GUARDAR DIRECTIVA"
+Only keeps latest record — on save, replace previous.
+This content is injected into every ACCAI AI call as [DIRECTIVA ACTIVA] in the system prompt.
+
+### Database tables:
+
+```
+account_snapshots: id, period_start, period_end, views, followers_gained, profile_visits, conversion_pct, created_at
+
+strategic_directive: id, content, created_at
+```
+
+---
+
+## MODULE 2 — REELS
+
+### Main view: table of all reels, sorted by fecha desc.
+
+Columns: Fecha | Tema | Ángulo | Views | Likes% | Comments% | Saves% | S/1K | Shares% | vs_promedio | Firma | Acciones
+
+**vs_promedio column:** calculated against the average views of all reels in DB. Show as "+23%" in #00CC66 or "-14%" in #FF2D20.
+
+**S/1K column:** calculated as (saves / followers_at_publish) * 1000. Monospace, 2 decimal places. Color: above 5.0 → #0C2DF5, below 1.0 → #FF2D20, between → #F0F0F0.
+
+**Firma column:** auto-classified badge:
+- saves_pct > avg_saves_pct * 1.3 AND views > 5000 → "CONVERTIDOR" (badge background #0C2DF5)
+- views > avg_views * 1.5 AND saves_pct < avg_saves_pct → "VIRAL" (badge background #CC8800)
+- views > avg_views * 1.2 AND saves_pct > avg_saves_pct → "EDUCATIVO" (badge background #00CC66)
+- Otherwise → "MUERTO" (badge background #333333, text #666666)
+
+### "Agregar Reel" button → slide-in panel from right
+
+Form fields:
+- URL del reel (text, optional)
+- Fecha de publicación (date, required)
+- Tema (text, required)
+- Ángulo (select, required): Matemática innegable / Proceso visible / Contraste operador-amateur / Asimetría de mercado
+- Formato producción (select, required): Cara a cámara / Screenrecording / Mixto
+- Seguidores al momento de publicar (number, required)
+- Views (number, required)
+- Likes (number, required)
+- Comments (number, required)
+- Saves (number, required)
+- Shares (number, required)
+- Alcance (number, optional)
+- Transcripción (textarea, optional)
+- Notas (textarea, optional)
+
+On save: calculate likes_pct, comments_pct, saves_pct, shares_pct as (metric / views * 100). Calculate saves_per_1k as (saves / followers_at_publish * 1000). Auto-classify firma.
+
+### Row click → detail view
+Shows all metrics large, transcription, notes.
+Button: "ANALIZAR CON ACCAI" → navigates to ACCAI AI module, pre-selects AUTOPSIA mode, pre-fills with this reel's data.
+
+### Database table:
+
+```
+reels: id, url, fecha, tema, angulo, formato, followers_at_publish, views, likes, comments, saves, shares, alcance, likes_pct, comments_pct, saves_pct, shares_pct, saves_per_1k, transcripcion, notas, firma, created_at
+```
+
+---
+
+## MODULE 3 — COMPETIDORES
+
+### Section A: "// CUENTAS COMPETIDORAS"
+
+Table: Cuenta | Nicho | Seguidores aprox | Último análisis | Acciones
+
+"Agregar Competidor" button → modal form:
+- Handle de Instagram (text, required — prepend @ if not provided)
+- Nicho/categoría (text, required)
+- Seguidores aproximados (number)
+- Notas (textarea)
+
+Max 8 competitors. Show count "X/8" next to button. Disable button at 8.
+
+### Section B: "// VIDEOS COMPETIDORES"
+
+Table grouped by competitor handle, sorted by engagement level desc.
+Columns: Competidor | Tema | Hook | Views aprox | Engagement | Ángulo | Acciones
+
+"Agregar Video" button → modal form:
+- Competidor (select from saved competitors, required)
+- URL (text, optional)
+- Tema del video (text, required)
+- Hook — primeros 3 segundos (text, required)
+- Views aproximados (number)
+- Engagement level (select: Bajo / Medio / Alto / Viral)
+- Ángulo detectado (select: same 4 as own reels)
+- Transcripción (textarea, optional)
+- Notas de análisis (textarea, optional)
+
+### Database tables:
+
+```
+competitors: id, handle, nicho, followers_approx, notas, created_at
+
+competitor_reels: id, competitor_id (FK to competitors), url, tema, hook, views_approx, engagement_level, angulo_detectado, transcripcion, notas, created_at
+```
+
+---
+
+## MODULE 4 — ACCAI AI
+
+This is the core module. Model: claude-sonnet-4-20250514 (hardcoded, no toggle).
+
+### Six mode selector tabs at top:
+AUTOPSIA | BRIEF | DIAGNÓSTICO | COMPETENCIA | FUNNEL CHECK | CIERRE
+
+### Context Builder Function (server-side)
+
+Before every API call, build a context object by querying the DB:
+- Last 30 own reels with all metrics
+- Latest account_snapshot
+- Latest strategic_directive
+- All competitor reels with transcriptions
+- Top 5 own reels by saves_pct
+- Bottom 5 own reels by views
+- Count of reels per ángulo (last 30 days)
+- Count of reels per firma classification
+
+Inject this as a system message section labeled [CONTEXTO VILLACLUB LIVE].
+Inject the strategic directive as [DIRECTIVA ACTIVA].
+
+### Master System Prompt (prepend to ALL modes):
+
+```
+Eres ACCAI, el sistema de inteligencia estratégica de VILLACLUB™ operado por Diego Villarroel.
+
+Diego Villarroel: 23 años, Lechería Venezuela, abogado, operador de e-commerce físico con 4+ años de experiencia. CPC documentado $0.018 en Meta Ads Venezuela.
+
+Arquitectura de oferta:
+- Front-end $20: directorio de proveedores (China/USA/Colombia)
+- VILLACLUB OS $97: sistema completo con Meta Ads + ingeniería de percepción
+- Consultoría $300-500: acceso por DM cualificado
+- Setup completo $1000-2000: servicio done-for-you
+
+Mercado Venezuela:
+- 93% gana $240-510/mes
+- CPC promedio Venezuela: $0.018 vs $1.50 USA
+- Engaged Shoppers: 8.2% — base compradora baja, exige calidad en creativo y cierre
+- Ciclo de conversión: 2-7 días
+- Compra por validación racional, no impulso. Necesita prueba en SU contexto.
+- WhatsApp no es fricción — es validación emocional
+
+Los 4 ángulos de contenido:
+1. Matemática innegable: aritmética pura, costos reales, sin promesas de ingreso
+2. Proceso visible: screenrecordings, dashboards, chats con proveedores reales
+3. Contraste operador vs amateur: posicionamiento UP
+4. Asimetría de mercado: CPC VE vs USA, datos duros
+
+Formato: cara a cámara, 1:1, fondo negro, subtítulos al pecho, sin edits complejos.
+
+Tono de marca: Dominante. Preciso. Intransigente.
+NUNCA: entusiasmo performativo, lenguaje de coach, promesas de ingreso, comparación con competencia.
+SIEMPRE: afirmaciones sin hedging, números como argumento, vocabulario operacional.
+
+Avatar A — El Buscador: 18-28, $100-500 capital, miedo a ser estafado, busca el contacto mágico.
+Avatar B — El Operador Estancado: 25-45, factura $1k-10k/mes, problema de adquisición predecible, esclavo de su WhatsApp.
+
+REGLA DE OUTPUT: Máximo una página por respuesta. Diagnóstico frío. Sin padding. Sin bullet points decorativos. Directo al accionable.
+
+[DIRECTIVA ACTIVA]
+{directive_content}
+
+[CONTEXTO VILLACLUB LIVE]
+{context_data}
+```
+
+### Mode-Specific Prompts:
+
+**AUTOPSIA:**
+UI: Dropdown to select a reel from DB (show fecha + tema). If arriving from reel detail, pre-select that reel.
+System addition: "Modo AUTOPSIA. Analiza este reel específico contra el historial completo. Identifica exactamente qué combinación de variables (hook, ángulo, formato, tema, timing) produjo el resultado. Determina si es replicable y cómo, sin repetir el tema. Output: diagnóstico de por qué funcionó o falló + 2 conceptos derivados listos para ejecutar."
+
+**BRIEF:**
+UI: Textarea — "Describe tu semana: qué está pasando en el negocio, qué quieres comunicar, lanzamientos, contexto."
+System addition: "Modo BRIEF. Con el contexto de la semana y el historial de rendimiento, genera exactamente 3 conceptos de video. Cada uno: Hook (primeros 3 segundos exactos — lo que digo y lo que se ve), Ángulo (cuál de los 4), Estructura (qué mostrar, qué decir, en qué orden), CTA específico. Evita temas ya cubiertos en los últimos 30 días según el contexto."
+
+**DIAGNÓSTICO:**
+UI: Simple form with 4 number fields: Views últimos 7 días, Saves últimos 7 días, DMs recibidos, Ventas cerradas.
+System addition: "Modo DIAGNÓSTICO. Analiza el rendimiento de los últimos 7 días en orden estricto: Hook → Ángulo → Distribución → Oferta. Identifica el bottleneck real. No menciones el siguiente nivel hasta resolver el anterior. Una acción concreta por nivel de diagnóstico."
+
+**COMPETENCIA:**
+UI: Checkboxes to select which competitors to include (from saved competitors list).
+System addition: "Modo COMPETENCIA. Analiza los videos de los competidores seleccionados contra los de Diego. Identifica: 1) qué temas cubren que Diego no, 2) qué ángulos tienen mayor engagement en el mercado VE actualmente, 3) qué vacíos estratégicos existen que nadie está cubriendo. Output: mapa de brechas + 2 ataques concretos para los próximos 14 días."
+
+**FUNNEL CHECK:**
+UI: No additional input — button only. Uses all DB data.
+System addition: "Modo FUNNEL CHECK. Evalúa el mix de contenido de las últimas 2 semanas. Clasifica cada reel en: Autoridad (instalar quién es Diego), Confianza (prueba y casos), Conversión (activar compra). Determina el porcentaje actual en cada fase. El balance objetivo es 40% Autoridad / 35% Confianza / 25% Conversión para fase de crecimiento. Indica desequilibrio y qué tipo de pieza producir para corregirlo."
+
+**CIERRE:**
+UI: Textarea — "Pega el fragmento de conversación de DM o WhatsApp."
+System addition: "Modo CIERRE. Recibes un fragmento de conversación de DM o WhatsApp con un prospecto. Ejecuta: 1) Identifica el avatar (Buscador o Operador Estancado) y justifica en una línea. 2) Identifica la fase actual del cierre: Investigación / Apertura / Dolor / Gap / Calificación / Enrutamiento / Gameplan / Cierre. 3) Genera la respuesta exacta que Diego debe enviar — en su tono, con su vocabulario, lista para copiar y pegar. 4) Si el prospecto no está listo para cerrar, indica qué información extraer antes de avanzar. Tono: Diego Villarroel. Sin coaching, sin suavización, sin explicaciones innecesarias al prospecto."
+
+### UI Layout for ACCAI AI:
+- Mode tabs at top (horizontal, full width)
+- Active tab: bottom border 2px #0C2DF5
+- Mode-specific input area below tabs (varies per mode)
+- "EJECUTAR ACCAI" button, full width, #0C2DF5
+- Response area below: #0D0D0D background, Space Mono font, 16px, padding 32px, full width
+- After response, show in muted #666666 text: "// tokens: {input_tokens} in / {output_tokens} out — costo estimado: ${cost}" where cost = input_tokens * 0.000003 + output_tokens * 0.000015
+- "GUARDAR ANÁLISIS" button after response
+
+### API Route: /api/accai
+POST. Receives: { mode, userInput, reelId? (for autopsia), competitorIds? (for competencia) }
+Server-side: builds context from DB, assembles system prompt with master + mode-specific + context + directive.
+Streams response back. Use Vercel AI SDK streaming pattern.
+If API fails: show "// ERROR DE CONEXIÓN — verifica ANTHROPIC_API_KEY" in #FF2D20. Never show raw errors.
+
+### Database table:
+
+```
+accai_sessions: id, mode, input, response, tokens_input, tokens_output, cost_estimate, created_at
+```
+
+---
+
+## MODULE 5 — PLAN 90D
+
+### Layout: 3 columns — MES 1 | MES 2 | MES 3
+
+Each column has:
+
+**Header:** "// MES {N}" in Space Mono
+**Objetivo del mes:** editable text field, auto-saves on blur.
+
+**Mix de ángulos:** simple horizontal stacked bar (pure CSS, no chart library). 4 segments colored:
+- Matemática innegable: #0C2DF5
+- Proceso visible: #00CC66
+- Contraste operador-amateur: #CC8800
+- Asimetría de mercado: #9933FF
+
+Calculated from planned reels for that month. Show percentage labels.
+
+**4 week cards per month:**
+Each card: "// SEMANA {N}" header.
+3 reel slots inside each card.
+Each slot shows: tema + ángulo badge + status badge.
+
+Status badges:
+- PENDIENTE: border #666666, text #666666
+- GRABADO: border #CC8800, text #CC8800
+- PUBLICADO: border #00CC66, text #00CC66
+
+Click on a slot → small modal:
+- Link to existing reel in DB (dropdown, optional)
+- OR plan a concept: Tema (text) + Ángulo (select from 4)
+- Status (select: Pendiente / Grabado / Publicado)
+- Save button
+
+**Bottom of each column: "// MÉTRICAS OBJETIVO"**
+
+Month 1: Conversión perfil→seguidor > 15% | Save rate promedio > 3%
+Month 2: Ventas front-end > 50/mes | DMs entrantes > 100/mes
+Month 3: LTV por 1000 seguidores > $200 | Upsell rate front→OS > 10%
+
+Show current actual value next to target (pulled from DB) with color: green if met, red if not, #666666 if no data.
+
+### Database table:
+
+```
+plan_reels: id, mes (1-3), semana (1-4), slot (1-3), reel_id (nullable FK to reels), concepto_tema, concepto_angulo, status (default 'PENDIENTE'), created_at
+
+plan_objectives: id, mes (1-3), objetivo_text, created_at
+```
+
+---
+
+## PASSWORD GATE
+
+Full-screen, background #080808.
+Center vertically and horizontally:
+- "ACCAI™" in Space Mono, white, 48px
+- Below: "// VILLACLUB INTERNAL" in #0C2DF5, 12px, uppercase, letter-spacing 0.2em
+- Below (24px gap): single password input, width 300px, no border-radius, border 1px #1A1A1A, background #0D0D0D, text white, placeholder "Contraseña"
+- Below: "ACCEDER" button, width 300px, #0C2DF5, white text, uppercase
+
+On wrong password: input border changes to #FF2D20. No error message text.
+On correct password: set localStorage "vc_accai_ok" = "true", show app.
+
+---
+
+## FORM VALIDATION
+
+All required fields: show inline error in #FF2D20 below the field. Text: "Campo requerido" or specific message.
+Number fields: must be >= 0.
+Date fields: must be valid date.
+Do not submit if validation fails.
+
+---
+
+## LOADING STATES
+
+Simple text: "// cargando..." in #0C2DF5. No spinners, no skeleton screens.
+
+---
+
+## RESPONSIVE
+
+Desktop only. Min-width: 1024px.
+If viewport < 1024px, show full-screen overlay: "// ACCAI requiere desktop" centered, #666666, with black background.
+
+---
+
+## EXTERNAL DEPENDENCIES
+
+- Google Fonts: Space Mono, Inter
+- Lucide React for icons
+- Prisma + @prisma/client
+- @anthropic-ai/sdk or direct fetch to Claude API
+- No other external scripts, no analytics, no telemetry
+
+---
+
+## BUILD ORDER
+
+1. Initialize Next.js 14 project with App Router
+2. Install dependencies: prisma, @prisma/client, tailwindcss, lucide-react
+3. Create Prisma schema with ALL tables (account_snapshots, strategic_directive, reels, competitors, competitor_reels, accai_sessions, plan_reels, plan_objectives)
+4. Run prisma generate (do NOT run prisma migrate until DATABASE_URL is confirmed)
+5. Build layout: password gate + sidebar navigation + main content area
+6. Build Module 1 — CUENTA
+7. Build Module 2 — REELS
+8. Build Module 3 — COMPETIDORES
+9. Build Module 4 — ACCAI AI (with all 6 modes and streaming)
+10. Build Module 5 — PLAN 90D
+11. Create API route /api/accai with context builder and streaming
+12. Test all forms, navigation, and ACCAI AI modes
+
+Start now. Build the Prisma schema first.
