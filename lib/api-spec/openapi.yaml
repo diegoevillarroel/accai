@@ -3,20 +3,30 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ACCAI API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: cuenta
+    description: Account snapshots and strategic directive
+  - name: reels
+    description: Reels management
+  - name: competidores
+    description: Competitors and competitor reels
+  - name: accai
+    description: AI analysis (ACCAI)
+  - name: plan
+    description: 90-day content plan
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +34,377 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── CUENTA ──────────────────────────────────────────────────────────────────
+
+  /cuenta/snapshots:
+    get:
+      operationId: listSnapshots
+      tags: [cuenta]
+      summary: List all account snapshots newest first
+      responses:
+        "200":
+          description: List of snapshots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountSnapshot"
+    post:
+      operationId: createSnapshot
+      tags: [cuenta]
+      summary: Create a new account snapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSnapshotBody"
+      responses:
+        "201":
+          description: Created snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountSnapshot"
+
+  /cuenta/latest:
+    get:
+      operationId: getLatestSnapshot
+      tags: [cuenta]
+      summary: Get the most recent account snapshot
+      responses:
+        "200":
+          description: Latest snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountSnapshot"
+        "404":
+          description: No snapshot found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /cuenta/directive:
+    get:
+      operationId: getDirective
+      tags: [cuenta]
+      summary: Get current strategic directive
+      responses:
+        "200":
+          description: Strategic directive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategicDirective"
+        "404":
+          description: No directive found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: saveDirective
+      tags: [cuenta]
+      summary: Save (replace) strategic directive
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveDirectiveBody"
+      responses:
+        "200":
+          description: Saved directive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategicDirective"
+
+  # ── REELS ───────────────────────────────────────────────────────────────────
+
+  /reels:
+    get:
+      operationId: listReels
+      tags: [reels]
+      summary: List all reels sorted by fecha desc
+      responses:
+        "200":
+          description: List of reels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reel"
+    post:
+      operationId: createReel
+      tags: [reels]
+      summary: Create a new reel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReelBody"
+      responses:
+        "201":
+          description: Created reel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reel"
+
+  /reels/stats:
+    get:
+      operationId: getReelsStats
+      tags: [reels]
+      summary: Get aggregate reel statistics (avg views, saves, firma breakdown)
+      responses:
+        "200":
+          description: Reel statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReelsStats"
+
+  /reels/{id}:
+    get:
+      operationId: getReel
+      tags: [reels]
+      summary: Get a single reel by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reel detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reel"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteReel
+      tags: [reels]
+      summary: Delete a reel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── COMPETIDORES ─────────────────────────────────────────────────────────────
+
+  /competitors:
+    get:
+      operationId: listCompetitors
+      tags: [competidores]
+      summary: List all competitors
+      responses:
+        "200":
+          description: List of competitors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Competitor"
+    post:
+      operationId: createCompetitor
+      tags: [competidores]
+      summary: Create a competitor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompetitorBody"
+      responses:
+        "201":
+          description: Created competitor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competitor"
+
+  /competitors/{id}:
+    delete:
+      operationId: deleteCompetitor
+      tags: [competidores]
+      summary: Delete a competitor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /competitor-reels:
+    get:
+      operationId: listCompetitorReels
+      tags: [competidores]
+      summary: List all competitor reels
+      responses:
+        "200":
+          description: List of competitor reels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CompetitorReel"
+    post:
+      operationId: createCompetitorReel
+      tags: [competidores]
+      summary: Create a competitor reel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompetitorReelBody"
+      responses:
+        "201":
+          description: Created competitor reel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompetitorReel"
+
+  /competitor-reels/{id}:
+    delete:
+      operationId: deleteCompetitorReel
+      tags: [competidores]
+      summary: Delete a competitor reel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ── ACCAI AI ─────────────────────────────────────────────────────────────────
+
+  /accai/sessions:
+    get:
+      operationId: listAccaiSessions
+      tags: [accai]
+      summary: List past ACCAI AI sessions
+      responses:
+        "200":
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccaiSession"
+    post:
+      operationId: createAccaiSession
+      tags: [accai]
+      summary: Save an ACCAI AI session after streaming completes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAccaiSessionBody"
+      responses:
+        "201":
+          description: Saved session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccaiSession"
+
+  # ── PLAN 90D ──────────────────────────────────────────────────────────────────
+
+  /plan/reels:
+    get:
+      operationId: listPlanReels
+      tags: [plan]
+      summary: List all planned reels
+      responses:
+        "200":
+          description: List of plan reels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlanReel"
+    post:
+      operationId: upsertPlanReel
+      tags: [plan]
+      summary: Upsert a plan reel slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertPlanReelBody"
+      responses:
+        "200":
+          description: Saved plan reel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanReel"
+
+  /plan/objectives:
+    get:
+      operationId: listPlanObjectives
+      tags: [plan]
+      summary: List plan objectives (one per mes)
+      responses:
+        "200":
+          description: List of objectives
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlanObjective"
+    post:
+      operationId: upsertPlanObjective
+      tags: [plan]
+      summary: Upsert the objective for a given mes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertPlanObjectiveBody"
+      responses:
+        "200":
+          description: Saved objective
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanObjective"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +415,474 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    # ── CUENTA ─────────────────────────────────────────────────────────────────
+
+    AccountSnapshot:
+      type: object
+      properties:
+        id:
+          type: integer
+        periodStart:
+          type: string
+        periodEnd:
+          type: string
+        views:
+          type: integer
+        followersGained:
+          type: integer
+        profileVisits:
+          type: integer
+        conversionPct:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - periodStart
+        - periodEnd
+        - views
+        - followersGained
+        - profileVisits
+        - conversionPct
+        - createdAt
+
+    CreateSnapshotBody:
+      type: object
+      properties:
+        periodStart:
+          type: string
+        periodEnd:
+          type: string
+        views:
+          type: integer
+        followersGained:
+          type: integer
+        profileVisits:
+          type: integer
+      required:
+        - periodStart
+        - periodEnd
+        - views
+        - followersGained
+        - profileVisits
+
+    StrategicDirective:
+      type: object
+      properties:
+        id:
+          type: integer
+        content:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - content
+        - createdAt
+
+    SaveDirectiveBody:
+      type: object
+      properties:
+        content:
+          type: string
+      required:
+        - content
+
+    # ── REELS ──────────────────────────────────────────────────────────────────
+
+    Reel:
+      type: object
+      properties:
+        id:
+          type: integer
+        url:
+          type: ["string", "null"]
+        fecha:
+          type: string
+        tema:
+          type: string
+        angulo:
+          type: string
+        formato:
+          type: string
+        followersAtPublish:
+          type: integer
+        views:
+          type: integer
+        likes:
+          type: integer
+        comments:
+          type: integer
+        saves:
+          type: integer
+        shares:
+          type: integer
+        alcance:
+          type: ["integer", "null"]
+        likesPct:
+          type: number
+        commentsPct:
+          type: number
+        savesPct:
+          type: number
+        sharesPct:
+          type: number
+        savesPer1k:
+          type: number
+        transcripcion:
+          type: ["string", "null"]
+        notas:
+          type: ["string", "null"]
+        firma:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - fecha
+        - tema
+        - angulo
+        - formato
+        - followersAtPublish
+        - views
+        - likes
+        - comments
+        - saves
+        - shares
+        - likesPct
+        - commentsPct
+        - savesPct
+        - sharesPct
+        - savesPer1k
+        - firma
+        - createdAt
+
+    CreateReelBody:
+      type: object
+      properties:
+        url:
+          type: ["string", "null"]
+        fecha:
+          type: string
+        tema:
+          type: string
+        angulo:
+          type: string
+        formato:
+          type: string
+        followersAtPublish:
+          type: integer
+        views:
+          type: integer
+        likes:
+          type: integer
+        comments:
+          type: integer
+        saves:
+          type: integer
+        shares:
+          type: integer
+        alcance:
+          type: ["integer", "null"]
+        transcripcion:
+          type: ["string", "null"]
+        notas:
+          type: ["string", "null"]
+      required:
+        - fecha
+        - tema
+        - angulo
+        - formato
+        - followersAtPublish
+        - views
+        - likes
+        - comments
+        - saves
+        - shares
+
+    ReelsStats:
+      type: object
+      properties:
+        totalReels:
+          type: integer
+        avgViews:
+          type: number
+        avgSavesPct:
+          type: number
+        avgLikesPct:
+          type: number
+        firmaBreakdown:
+          type: object
+          properties:
+            CONVERTIDOR:
+              type: integer
+            VIRAL:
+              type: integer
+            EDUCATIVO:
+              type: integer
+            MUERTO:
+              type: integer
+          required:
+            - CONVERTIDOR
+            - VIRAL
+            - EDUCATIVO
+            - MUERTO
+        anguloBreakdown:
+          type: object
+          properties:
+            matematica:
+              type: integer
+            proceso:
+              type: integer
+            contraste:
+              type: integer
+            asimetria:
+              type: integer
+          required:
+            - matematica
+            - proceso
+            - contraste
+            - asimetria
+      required:
+        - totalReels
+        - avgViews
+        - avgSavesPct
+        - avgLikesPct
+        - firmaBreakdown
+        - anguloBreakdown
+
+    # ── COMPETIDORES ───────────────────────────────────────────────────────────
+
+    Competitor:
+      type: object
+      properties:
+        id:
+          type: integer
+        handle:
+          type: string
+        nicho:
+          type: string
+        followersApprox:
+          type: ["integer", "null"]
+        notas:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - handle
+        - nicho
+        - createdAt
+
+    CreateCompetitorBody:
+      type: object
+      properties:
+        handle:
+          type: string
+        nicho:
+          type: string
+        followersApprox:
+          type: ["integer", "null"]
+        notas:
+          type: ["string", "null"]
+      required:
+        - handle
+        - nicho
+
+    CompetitorReel:
+      type: object
+      properties:
+        id:
+          type: integer
+        competitorId:
+          type: integer
+        url:
+          type: ["string", "null"]
+        tema:
+          type: string
+        hook:
+          type: string
+        viewsApprox:
+          type: ["integer", "null"]
+        engagementLevel:
+          type: string
+        anguloDetectado:
+          type: ["string", "null"]
+        transcripcion:
+          type: ["string", "null"]
+        notas:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - competitorId
+        - tema
+        - hook
+        - engagementLevel
+        - createdAt
+
+    CreateCompetitorReelBody:
+      type: object
+      properties:
+        competitorId:
+          type: integer
+        url:
+          type: ["string", "null"]
+        tema:
+          type: string
+        hook:
+          type: string
+        viewsApprox:
+          type: ["integer", "null"]
+        engagementLevel:
+          type: string
+        anguloDetectado:
+          type: ["string", "null"]
+        transcripcion:
+          type: ["string", "null"]
+        notas:
+          type: ["string", "null"]
+      required:
+        - competitorId
+        - tema
+        - hook
+        - engagementLevel
+
+    # ── ACCAI AI ───────────────────────────────────────────────────────────────
+
+    AccaiSession:
+      type: object
+      properties:
+        id:
+          type: integer
+        mode:
+          type: string
+        input:
+          type: string
+        response:
+          type: string
+        tokensInput:
+          type: ["integer", "null"]
+        tokensOutput:
+          type: ["integer", "null"]
+        costEstimate:
+          type: ["number", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - mode
+        - input
+        - response
+        - createdAt
+
+    CreateAccaiSessionBody:
+      type: object
+      properties:
+        mode:
+          type: string
+        input:
+          type: string
+        response:
+          type: string
+        tokensInput:
+          type: ["integer", "null"]
+        tokensOutput:
+          type: ["integer", "null"]
+        costEstimate:
+          type: ["number", "null"]
+      required:
+        - mode
+        - input
+        - response
+
+    # ── PLAN 90D ───────────────────────────────────────────────────────────────
+
+    PlanReel:
+      type: object
+      properties:
+        id:
+          type: integer
+        mes:
+          type: integer
+        semana:
+          type: integer
+        slot:
+          type: integer
+        reelId:
+          type: ["integer", "null"]
+        conceptoTema:
+          type: ["string", "null"]
+        conceptoAngulo:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - mes
+        - semana
+        - slot
+        - status
+        - createdAt
+
+    UpsertPlanReelBody:
+      type: object
+      properties:
+        mes:
+          type: integer
+        semana:
+          type: integer
+        slot:
+          type: integer
+        reelId:
+          type: ["integer", "null"]
+        conceptoTema:
+          type: ["string", "null"]
+        conceptoAngulo:
+          type: ["string", "null"]
+        status:
+          type: string
+      required:
+        - mes
+        - semana
+        - slot
+        - status
+
+    PlanObjective:
+      type: object
+      properties:
+        id:
+          type: integer
+        mes:
+          type: integer
+        objetivoText:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - mes
+        - objetivoText
+        - createdAt
+
+    UpsertPlanObjectiveBody:
+      type: object
+      properties:
+        mes:
+          type: integer
+        objetivoText:
+          type: string
+      required:
+        - mes
+        - objetivoText
