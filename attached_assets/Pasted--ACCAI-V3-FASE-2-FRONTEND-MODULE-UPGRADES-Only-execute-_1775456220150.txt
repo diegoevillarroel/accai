@@ -1,0 +1,269 @@
+# ACCAI V3 — FASE 2: FRONTEND & MODULE UPGRADES
+# Only execute this AFTER Phase 1 is verified and all API routes return valid data.
+
+---
+
+## UPGRADE MODULE 1 — CUENTA
+
+### Add "SYNC DESDE INSTAGRAM" button
+At the top of the CUENTA module, add a button: "SINCRONIZAR CUENTA" (#0C2DF5)
+Calls POST /api/instagram/sync-account.
+Auto-fills the stat cards with fresh data from Instagram.
+Show: "// última sincronización: {timestamp}"
+
+### Add "// MEJOR HORA PARA PUBLICAR" section
+Below the stat cards, add a section with a 24-hour horizontal bar chart (pure CSS — no chart library).
+Calls GET /api/instagram/timing on page load.
+Each hour = bar height proportional to online followers count.
+Highlight top 3 hours in #0C2DF5.
+Label the top 3: "🔵 VENTANA ÓPTIMA"
+
+### Token status in sidebar footer
+Add small text at bottom of sidebar:
+"// IG: {days}d | TH: {days}d"
+Calls GET /api/instagram/token-status on app load.
+If either token < 7 days remaining: show in #FF2D20.
+
+---
+
+## UPGRADE MODULE 2 — REELS (major overhaul)
+
+### Sync bar at top
+Full-width bar above the reels table:
+
+```
+// INSTAGRAM SYNC
+[SINCRONIZAR] último sync: hace 3h | 142 reels | 12 sin clasificar
+```
+
+- "SINCRONIZAR" button calls POST /api/instagram/sync
+- Show progress: "// sincronizando... 34/142"
+- After sync, refresh table
+- "12 sin clasificar" = count of reels where tema OR angulo is NULL
+
+### Rate limit banner
+If the sync response has rateLimitWarning: true, show an orange banner:
+"// ⚠️ API RATE LIMIT CERCANO — sincronización pausada"
+Background #CC8800, text white.
+
+### ACCAI auto-classify button
+Next to SINCRONIZAR, add button: "ACCAI CLASIFICAR" (outlined, #0C2DF5)
+When clicked:
+1. Get all unclassified reels (tema = NULL)
+2. For each, send caption to /api/accai with mode "classify" and prompt:
+   "Clasifica este reel de VILLACLUB. Caption: {caption}. Responde SOLO en JSON válido sin markdown: {\"tema\": \"string\", \"angulo\": \"Matemática innegable\" | \"Proceso visible\" | \"Contraste operador-amateur\" | \"Asimetría de mercado\", \"formato\": \"Cara a cámara\" | \"Screenrecording\" | \"Mixto\"}"
+3. Parse and update DB
+4. Show: "// {N} reels clasificados"
+
+### Quick-classify for individual reels
+Reels with NULL tema: show yellow left border + "CLASIFICAR" button in row.
+Click opens inline mini-form (NOT full panel): Tema + Ángulo dropdown + Formato dropdown + Save.
+
+### New table columns
+Add after existing columns:
+- Watch time (seconds, from watch_time_avg)
+- Replays (from replays column)
+- Completion% (watch_time_avg / estimated duration if available, otherwise show "—")
+
+### "// INTELIGENCIA DE RENDIMIENTO" — dashboard cards above table
+
+Four cards in CSS grid:
+
+**Card 1: "MEJOR ÁNGULO"**
+- Angle with highest avg saves_pct across all classified reels
+- Show: angle name + avg saves% + "basado en {N} reels"
+
+**Card 2: "DURACIÓN ÓPTIMA"**
+- Group reels by watch_time_avg ranges (0-15s, 15-30s, 30-45s, 45-60s)
+- Show range with highest avg completion_rate
+- Display: "{X}-{Y}s → {Z}% completion"
+
+**Card 3: "HORA PICO"**
+- From /api/instagram/timing cache
+- Show: "Martes 8PM" format
+- Small text: "basado en tus seguidores"
+
+**Card 4: "TENDENCIA"**
+- Avg views last 10 reels vs previous 10
+- "↑ 23%" in #00CC66 or "↓ 14%" in #FF2D20
+
+If < 5 reels: all cards show "// datos insuficientes" in #666666
+
+### "// MINA DE COMENTARIOS" — collapsible section below table
+
+Button: "EXTRAER COMENTARIOS" calls GET /api/instagram/comments/mine?limit=20
+Loads all comments, then sends the full corpus to /api/accai with prompt:
+"Analiza estos comentarios de Instagram de VILLACLUB. Agrupa por tema recurrente. Para cada grupo responde SOLO en JSON array: [{\"keyword\": string, \"count\": number, \"tipo\": \"pregunta\"|\"objecion\"|\"interes\"|\"ruido\", \"accion\": \"descripción de reel sugerido\"}]"
+
+Display as table: Tema | Frecuencia | Tipo (color-coded badge) | Acción sugerida
+- pregunta → blue badge
+- objecion → red badge
+- interes → green badge
+- ruido → gray badge (dimmed row)
+
+### Auto-AUTOPSIA after sync
+When new reels are detected during sync, show a notification bar:
+"// {N} reels nuevos detectados — [EJECUTAR AUTOPSIA DEL ÚLTIMO]"
+Click calls /api/accai with mode autopsia and the most recent new reel's data.
+Stream response inline below the sync bar.
+
+---
+
+## UPGRADE MODULE 3 — COMPETIDORES
+
+### Auto-pull on add
+When adding a competitor by handle, immediately call POST /api/instagram/competitor.
+Auto-fill: followers_approx, bio (from their IG bio), and import their last 30 posts.
+
+### Per-competitor SYNC button
+Each competitor row has a "SYNC" button → calls POST /api/instagram/competitor with their handle.
+Updates data and re-imports posts.
+
+### Engagement ranking header
+Above competitors table, show:
+"// COMPETIDOR MÁS ACTIVO: @{handle} — {engagement_rate}% engagement promedio"
+Calculate from imported posts. Highlight in #FF2D20 if their engagement > yours.
+
+### "DETECTAR BRECHAS" button
+Below competitors section: "DETECTAR BRECHAS CON ACCAI" (#0C2DF5)
+Sends ALL competitor data + Diego's reel data to /api/accai with mode competencia.
+Stream response inline below the section.
+
+---
+
+## NEW MODULE 6 — THREADS (new sidebar item)
+
+Add 6th nav item: THREADS (MessageSquare icon from Lucide)
+Position: after PLAN 90D in sidebar.
+
+### Layout:
+
+**Top bar:**
+```
+// THREADS SYNC
+[SINCRONIZAR] último sync: hace 2h | 47 posts | [PUBLICAR NUEVO]
+```
+
+SINCRONIZAR calls POST /api/threads/sync.
+PUBLICAR NUEVO opens a modal with textarea + "PUBLICAR" button → calls POST /api/threads/publish.
+
+**Stats row: 3 cards**
+
+Card 1: "ENGAGEMENT PROMEDIO" — avg engagement_rate across all threads
+Card 2: "MEJOR POST" — thread with highest engagement_rate + preview text
+Card 3: "POSTS ESTA SEMANA" — count of threads posted in last 7 days
+
+**Threads table:**
+Columns: Fecha | Texto (truncated to 80 chars) | Likes | Replies | Reposts | Views | Engagement% | Estado | Acciones
+
+Engagement% color: above 2x baseline average → #0C2DF5 (highlight as viral)
+
+Estado column:
+- If promoted_to_reel = true → "ESCALADO" badge in #00CC66
+- Otherwise → blank
+
+**"CONVERTIR A REEL" button** on rows with engagement > 2x baseline:
+Show as action button with lightning icon.
+Clicking sends thread text to /api/accai with mode brief and this addition to the prompt:
+"Este texto se publicó en Threads y generó {engagement_rate}% de engagement, que es {X}x por encima de la media. Conviértelo en un guion de Reel: Hook exacto (primeros 3 segundos — qué digo y qué se ve), Retención (estructura), CTA. Mantén el mismo ángulo y tono que hizo viral el Thread."
+Stream response inline.
+After saving, mark threads_post as promoted_to_reel = true.
+
+**"// PROSPECCIÓN" section (collapsible)**
+Search bar: "Buscar en Threads..." + search button
+Calls POST /api/threads/search with query.
+Shows results as cards: username + text + timestamp + engagement.
+Each result has "RESPONDER" button → opens modal with AI-generated reply (using ACCAI in autoridad tone) + "PUBLICAR RESPUESTA" button that calls the Threads reply API.
+
+---
+
+## UPGRADE MODULE 4 — ACCAI AI
+
+### Mode CIERRE — DM integration
+Replace single textarea with two tabs: "PEGAR TEXTO" | "IMPORTAR DM"
+
+"PEGAR TEXTO" = existing textarea for WhatsApp conversations.
+
+"IMPORTAR DM":
+1. Calls GET /api/instagram/conversations
+2. Shows list: participant username + last message preview + timestamp
+3. Click a thread → calls GET /api/instagram/conversations/:id
+4. Loads full conversation into the input area
+5. ACCAI processes with CIERRE prompt
+
+### Mode BRIEF — enhanced context
+Update BRIEF context builder to include:
+- Top 5 comment themes from comment_cache (if populated)
+- Add to system prompt: "Estos son los temas que la audiencia pregunta activamente en comentarios: {themes}. Prioriza conceptos que respondan estas preguntas reales."
+- Top performing Threads posts (if any have high engagement)
+- Add: "Estos Threads tuvieron engagement alto: {threads}. Considera adaptarlos a Reel."
+
+### Mode RESPONDER (7th tab — new)
+UI: Shows all comments from comment_cache where replied = false.
+Each comment: username + text + reel tema + timestamp.
+
+Two buttons per comment:
+- "GENERAR" → /api/accai with prompt: "Genera una respuesta a este comentario de Instagram en tono VILLACLUB. Si es pregunta: responde con valor + CTA sutil. Si es objeción: reframe con dato. Si es elogio: agradece breve. Máximo 2 líneas. Lista para copiar."
+- "ENVIAR" → calls POST /api/instagram/comments/reply
+
+After sending, mark as replied in DB.
+
+Batch mode: "GENERAR TODO" processes all unreplied comments, shows list of comment → response pairs. "ENVIAR TODO" sends all.
+
+### Auto-FUNNEL CHECK alert
+On ACCAI AI module load, auto-calculate content balance from last 14 days of reels.
+Classify each reel by its function: Autoridad / Confianza / Conversión (based on angulo).
+If balance deviates >15% from target (40/35/25), show alert below mode tabs:
+"// ⚠️ DESBALANCE: {actual}% Autoridad / {actual}% Confianza / {actual}% Conversión — faltan piezas de {lowest_category}"
+
+---
+
+## UPGRADE MODULE 5 — PLAN 90D
+
+### Live metric tracking
+Each month's "MÉTRICAS OBJETIVO" pulls actual data:
+- Conversión perfil→seguidor → from latest account_snapshot
+- Save rate promedio → calculated from reels in DB
+- DMs entrantes → count from conversations API (if available)
+- Show: "Actual: {value} / Objetivo: {target}" with color: green if met, red if not
+
+### BRIEF → PLAN 90D pipeline
+After BRIEF generates 3 concepts in ACCAI AI, show 3 cards below response.
+Each card: tema + ángulo badge + "AGREGAR A PLAN →"
+Click opens inline selector: Mes (1/2/3) → Semana (1-4) → Slot (1-3)
+Creates plan_reels record with concepto_tema, concepto_angulo, status PENDIENTE.
+
+---
+
+## UX UPGRADES (implement last)
+
+### Keyboard shortcuts
+- Ctrl+Enter / Cmd+Enter → triggers "EJECUTAR ACCAI" in ACCAI AI module
+- Escape → closes any open modal or slide-in panel
+
+### Nav badges
+Sidebar counts:
+- REELS: total + unclassified in yellow
+- COMPETIDORES: competitor count
+- THREADS: posts this week
+- ACCAI AI: sessions today
+
+### Export
+REELS module: "EXPORTAR CSV" link (muted, top-right). Server-side CSV generation.
+
+### Last session recall
+ACCAI AI: below mode tabs, show "// último: {mode} — {date}" that loads most recent session.
+
+---
+
+## FINAL STEP — PUSH TO GITHUB
+
+1. git init (if not already)
+2. Create .gitignore: node_modules, .env, .env.local, .next, prisma/*.db, dist
+3. git add .
+4. git commit -m "ACCAI v3 — Graph API + Threads + comment mining + DM integration + competitive intelligence"
+5. git remote add origin {GITHUB_REPO_URL}
+6. git branch -M main
+7. git push -u origin main
+
+IMPORTANT: Replace {GITHUB_REPO_URL} with actual repo URL before running.

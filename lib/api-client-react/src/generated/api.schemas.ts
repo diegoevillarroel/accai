@@ -46,10 +46,15 @@ export interface Reel {
   id: number;
   /** @nullable */
   url?: string | null;
+  /** @nullable */
+  igMediaId?: string | null;
   fecha: string;
-  tema: string;
-  angulo: string;
-  formato: string;
+  /** @nullable */
+  tema?: string | null;
+  /** @nullable */
+  angulo?: string | null;
+  /** @nullable */
+  formato?: string | null;
   followersAtPublish: number;
   views: number;
   likes: number;
@@ -64,10 +69,54 @@ export interface Reel {
   sharesPct: number;
   savesPer1k: number;
   /** @nullable */
+  watchTimeAvg?: number | null;
+  /** @nullable */
+  replays?: number | null;
+  /** @nullable */
   transcripcion?: string | null;
   /** @nullable */
   notas?: string | null;
   firma: string;
+  createdAt: string;
+}
+
+export interface PatchReelBody {
+  tema?: string;
+  angulo?: string;
+  formato?: string;
+  transcripcion?: string;
+  notas?: string;
+}
+
+export interface ThreadsPost {
+  id: number;
+  threadsMediaId?: string | null;
+  textContent?: string | null;
+  permalink?: string | null;
+  postType?: string | null;
+  likes: number;
+  replies: number;
+  reposts: number;
+  quotes: number;
+  views: number;
+  engagementRate?: number | null;
+  postedAt?: string | null;
+  syncedAt?: string | null;
+  promotedToReel: boolean;
+  createdAt: string;
+}
+
+export interface CommentCacheItem {
+  id: number;
+  mediaId: string;
+  instagramCommentId?: string | null;
+  username?: string | null;
+  text?: string | null;
+  commentTimestamp?: string | null;
+  likeCount: number;
+  replied: boolean;
+  replyText?: string | null;
+  category?: string | null;
   createdAt: string;
 }
 

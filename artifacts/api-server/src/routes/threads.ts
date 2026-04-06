@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db, threadsPostsTable } from "@workspace/db";
 import {
   getAllThreads,
@@ -119,6 +119,34 @@ router.get("/threads/replies/:id", async (req, res): Promise<void> => {
   try {
     const replies = await getThreadReplies(req.params['id']);
     res.json(replies);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get("/threads/posts", async (_req, res): Promise<void> => {
+  try {
+    const posts = await db
+      .select()
+      .from(threadsPostsTable)
+      .orderBy(desc(threadsPostsTable.postedAt));
+    res.json(serialize(posts));
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.put("/threads/:id/promote", async (req, res): Promise<void> => {
+  const id = parseInt(req.params['id'], 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  try {
+    const [updated] = await db
+      .update(threadsPostsTable)
+      .set({ promotedToReel: true })
+      .where(eq(threadsPostsTable.id, id))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "Post not found" }); return; }
+    res.json(serialize(updated));
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

@@ -82,10 +82,11 @@ export const SaveDirectiveResponse = zod.object({
 export const ListReelsResponseItem = zod.object({
   id: zod.number(),
   url: zod.string().nullish(),
+  igMediaId: zod.string().nullish(),
   fecha: zod.string(),
-  tema: zod.string(),
-  angulo: zod.string(),
-  formato: zod.string(),
+  tema: zod.string().nullish(),
+  angulo: zod.string().nullish(),
+  formato: zod.string().nullish(),
   followersAtPublish: zod.number(),
   views: zod.number(),
   likes: zod.number(),
@@ -98,6 +99,8 @@ export const ListReelsResponseItem = zod.object({
   savesPct: zod.number(),
   sharesPct: zod.number(),
   savesPer1k: zod.number(),
+  watchTimeAvg: zod.number().nullish(),
+  replays: zod.number().nullish(),
   transcripcion: zod.string().nullish(),
   notas: zod.string().nullish(),
   firma: zod.string(),
@@ -157,10 +160,11 @@ export const GetReelParams = zod.object({
 export const GetReelResponse = zod.object({
   id: zod.number(),
   url: zod.string().nullish(),
+  igMediaId: zod.string().nullish(),
   fecha: zod.string(),
-  tema: zod.string(),
-  angulo: zod.string(),
-  formato: zod.string(),
+  tema: zod.string().nullish(),
+  angulo: zod.string().nullish(),
+  formato: zod.string().nullish(),
   followersAtPublish: zod.number(),
   views: zod.number(),
   likes: zod.number(),
@@ -173,10 +177,20 @@ export const GetReelResponse = zod.object({
   savesPct: zod.number(),
   sharesPct: zod.number(),
   savesPer1k: zod.number(),
+  watchTimeAvg: zod.number().nullish(),
+  replays: zod.number().nullish(),
   transcripcion: zod.string().nullish(),
   notas: zod.string().nullish(),
   firma: zod.string(),
   createdAt: zod.string(),
+});
+
+export const PatchReelBody = zod.object({
+  tema: zod.string().optional(),
+  angulo: zod.string().optional(),
+  formato: zod.string().optional(),
+  transcripcion: zod.string().optional(),
+  notas: zod.string().optional(),
 });
 
 /**

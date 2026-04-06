@@ -450,6 +450,35 @@ router.get("/instagram/timing", async (_req, res): Promise<void> => {
   }
 });
 
+router.get("/instagram/comments/cache", async (_req, res): Promise<void> => {
+  try {
+    const comments = await db
+      .select()
+      .from(commentCacheTable)
+      .orderBy(desc(commentCacheTable.commentTimestamp));
+    res.json(serialize(comments));
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post("/instagram/comments/:id/mark-replied", async (req, res): Promise<void> => {
+  const id = parseInt(req.params['id'], 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const { replyText } = req.body;
+  try {
+    const [updated] = await db
+      .update(commentCacheTable)
+      .set({ replied: true, replyText: replyText || null })
+      .where(eq(commentCacheTable.id, id))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "Comment not found" }); return; }
+    res.json(serialize(updated));
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.get("/instagram/token-status", async (_req, res): Promise<void> => {
   const token = process.env.INSTAGRAM_ACCESS_TOKEN;
   if (!token) {
