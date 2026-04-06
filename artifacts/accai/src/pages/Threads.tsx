@@ -142,7 +142,7 @@ export function Threads() {
   return (
     <div className="space-y-8">
       {/* SYNC BAR */}
-      <div className="border border-[#1A1A1A] bg-[#0D0D0D] p-4">
+      <div className="vc-card" style={{ padding: "14px 20px" }}>
         <div className="flex items-center gap-4">
           <span className="text-[#666666] font-mono text-xs">// THREADS SYNC</span>
           <Button
@@ -195,21 +195,21 @@ export function Threads() {
       </div>
 
       {/* STAT CARDS */}
-      <div className="grid grid-cols-3 gap-6">
-        <div className="border border-[#1A1A1A] p-6">
-          <div className="text-[#666666] text-xs uppercase tracking-wider mb-2 font-mono">Engagement Promedio</div>
-          <div className="text-3xl font-mono text-[#0C2DF5]">{avgEngagement.toFixed(2)}%</div>
+      <div className="grid grid-cols-3 gap-4">
+        <div className="vc-stat-card">
+          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontFamily: "var(--font-body)", marginBottom: "8px" }}>Engagement Promedio</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: "28px", fontWeight: 700, color: "var(--accent)", lineHeight: 1 }}>{avgEngagement.toFixed(2)}%</div>
         </div>
-        <div className="border border-[#1A1A1A] p-6">
-          <div className="text-[#666666] text-xs uppercase tracking-wider mb-2 font-mono">Mejor Post</div>
-          <div className="text-lg font-mono text-[#0C2DF5]">{bestPost ? `${(bestPost.engagementRate || 0).toFixed(2)}%` : "-"}</div>
+        <div className="vc-stat-card">
+          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontFamily: "var(--font-body)", marginBottom: "8px" }}>Mejor Post</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 700, color: "var(--accent)", lineHeight: 1 }}>{bestPost ? `${(bestPost.engagementRate || 0).toFixed(2)}%` : "-"}</div>
           {bestPost?.textContent && (
-            <div className="text-[#666666] font-mono text-xs mt-1 truncate">{bestPost.textContent.substring(0, 60)}...</div>
+            <div style={{ color: "var(--text-muted)", fontFamily: "var(--font-body)", fontSize: "11px", marginTop: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bestPost.textContent.substring(0, 60)}...</div>
           )}
         </div>
-        <div className="border border-[#1A1A1A] p-6">
-          <div className="text-[#666666] text-xs uppercase tracking-wider mb-2 font-mono">Posts Esta Semana</div>
-          <div className="text-3xl font-mono">{postsThisWeek}</div>
+        <div className="vc-stat-card">
+          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontFamily: "var(--font-body)", marginBottom: "8px" }}>Posts Esta Semana</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", lineHeight: 1 }}>{postsThisWeek}</div>
         </div>
       </div>
 

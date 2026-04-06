@@ -119,7 +119,7 @@ export function Plan90D() {
     <div className="space-y-12">
       {/* LIVE OBJECTIVES */}
       <section>
-        <h2 className="text-[#0C2DF5] font-mono text-sm uppercase tracking-widest mb-6">// OBJETIVOS 90 DÍAS</h2>
+        <div className="vc-section-title">// OBJETIVOS 90 DÍAS</div>
         <div className="grid grid-cols-4 gap-4">
           {OBJECTIVE_KEYS.map(k => {
             const goalVal = Number(objForms[k.key] || 0);
@@ -134,28 +134,29 @@ export function Plan90D() {
             const pct = goalVal > 0 ? Math.min((currentVal / goalVal) * 100, 100) : 0;
 
             return (
-              <div key={k.key} className="border border-[#1A1A1A] p-4">
-                <div className="text-[#666666] font-mono text-[10px] uppercase tracking-widest mb-3">{k.label}</div>
-                <div className="space-y-2">
+              <div key={k.key} className="vc-card" style={{ padding: "20px" }}>
+                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontFamily: "var(--font-body)", marginBottom: "12px" }}>{k.label}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                   <div>
-                    <label className="text-[#444444] font-mono text-[10px]">META</label>
+                    <label style={{ fontSize: "9px", color: "var(--text-muted)", fontFamily: "var(--font-body)", textTransform: "uppercase", letterSpacing: "0.08em" }}>META</label>
                     <Input
                       type="number"
                       value={objForms[k.key] || ""}
                       onChange={e => setObjForms(prev => ({ ...prev, [k.key]: e.target.value }))}
-                      className="bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5] h-8 text-sm mt-1"
+                      className="bg-transparent border-[rgba(255,255,255,0.1)] focus-visible:ring-0 focus-visible:border-[#0C2DF5] h-8 text-sm mt-1"
+                      style={{ borderRadius: "4px" }}
                     />
                   </div>
                   {goalVal > 0 && (
                     <>
-                      <div className="flex items-center justify-between font-mono text-xs">
-                        <span className="text-[#666666]">actual</span>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "var(--font-display)", fontSize: "11px" }}>
+                        <span style={{ color: "var(--text-muted)" }}>actual</span>
                         <span style={{ color }}>{k.key === "reelsPerWeekGoal" ? currentVal.toFixed(1) : Math.round(currentVal).toLocaleString()} {k.unit}</span>
                       </div>
-                      <div className="w-full bg-[#1A1A1A] h-1">
-                        <div className="h-1 transition-all" style={{ width: `${pct}%`, background: color }} />
+                      <div style={{ width: "100%", background: "rgba(255,255,255,0.06)", height: "2px", borderRadius: "1px" }}>
+                        <div style={{ height: "2px", borderRadius: "1px", transition: "width 300ms ease", width: `${pct}%`, background: color }} />
                       </div>
-                      <div className="font-mono text-[10px]" style={{ color }}>{pct.toFixed(0)}%</div>
+                      <div style={{ fontFamily: "var(--font-display)", fontSize: "11px", color }}>{pct.toFixed(0)}%</div>
                     </>
                   )}
                 </div>
@@ -164,7 +165,7 @@ export function Plan90D() {
           })}
         </div>
         <div className="mt-4">
-          <Button onClick={handleSaveObjectives} disabled={savingObj} className="bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest font-mono text-xs h-9 px-6">
+          <Button onClick={handleSaveObjectives} disabled={savingObj} className="bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white uppercase tracking-widest font-mono text-xs h-9 px-6">
             {savingObj ? "GUARDANDO..." : "GUARDAR OBJETIVOS"}
           </Button>
         </div>
@@ -172,8 +173,8 @@ export function Plan90D() {
 
       {/* WEEK SELECTOR + CALENDAR */}
       <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-[#0C2DF5] font-mono text-sm uppercase tracking-widest">// CALENDARIO DE CONTENIDO</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="vc-section-title" style={{ marginBottom: 0 }}>// CALENDARIO DE CONTENIDO</div>
           <div className="flex items-center gap-2">
             <span className="text-[#666666] font-mono text-xs">SEMANA</span>
             <Select value={String(selectedWeek)} onValueChange={v => setSelectedWeek(Number(v))}>
@@ -241,35 +242,36 @@ export function Plan90D() {
 
       {/* ALL WEEKS OVERVIEW */}
       <section>
-        <h2 className="text-[#0C2DF5] font-mono text-sm uppercase tracking-widest mb-6">// VISTA 90D</h2>
-        <div className="border border-[#1A1A1A]">
-          <table className="w-full text-xs text-left">
+        <div className="vc-section-title">// VISTA 90D</div>
+        <div style={{ background: "var(--glass)", border: "1px solid var(--glass-border)", borderRadius: "8px", overflow: "hidden" }}>
+          <table className="vc-table" style={{ fontSize: "12px" }}>
             <thead>
-              <tr className="border-b border-[#1A1A1A] text-[#666666] font-mono text-[10px] uppercase tracking-wider">
-                <th className="py-3 px-4 font-normal">Semana</th>
-                <th className="py-3 px-4 font-normal">Lun</th>
-                <th className="py-3 px-4 font-normal">Mar</th>
-                <th className="py-3 px-4 font-normal">Mie</th>
-                <th className="py-3 px-4 font-normal">Jue</th>
-                <th className="py-3 px-4 font-normal">Vie</th>
-                <th className="py-3 px-4 font-normal">Sab</th>
-                <th className="py-3 px-4 font-normal">Dom</th>
+              <tr>
+                <th>Semana</th>
+                <th>Lun</th>
+                <th>Mar</th>
+                <th>Mie</th>
+                <th>Jue</th>
+                <th>Vie</th>
+                <th>Sab</th>
+                <th>Dom</th>
               </tr>
             </thead>
-            <tbody className="font-mono">
+            <tbody style={{ fontFamily: "var(--font-body)" }}>
               {isLoadingPlan ? (
-                <tr><td colSpan={8} className="py-8 text-center text-[#0C2DF5]">// cargando...</td></tr>
+                <tr><td colSpan={8} style={{ padding: "32px", textAlign: "center" }} className="loading-pulse">// cargando...</td></tr>
               ) : (
                 WEEKS.map(week => {
                   const wr = planReels.filter(r => r.semana === week);
+                  const isSelected = week === selectedWeek;
                   return (
-                    <tr key={week} className={`${week === selectedWeek ? "bg-[#0C2DF5]/5 border-l-2 border-l-[#0C2DF5]" : week % 2 === 0 ? "bg-[#0D0D0D]" : "bg-[#111111]"} cursor-pointer hover:bg-[#0C2DF5]/3`} onClick={() => setSelectedWeek(week)}>
-                      <td className="py-3 px-4 border-b border-[#1A1A1A] text-[#666666]">S{week}</td>
+                    <tr key={week} style={{ cursor: "pointer", borderLeft: isSelected ? "2px solid var(--accent)" : "2px solid transparent", background: isSelected ? "rgba(12,45,245,0.04)" : undefined }} onClick={() => setSelectedWeek(week)}>
+                      <td style={{ color: "var(--text-muted)", fontSize: "11px" }}>S{week}</td>
                       {DIAS.map(dia => {
                         const dr = wr.find(r => r.dia === dia);
                         return (
-                          <td key={dia} className="py-3 px-4 border-b border-[#1A1A1A] max-w-[80px] truncate" title={dr?.tema || ""}>
-                            {dr?.tema ? <span className="text-[#0C2DF5]">{dr.tema.substring(0, 12)}{dr.tema.length > 12 ? "…" : ""}</span> : <span className="text-[#1A1A1A]">—</span>}
+                          <td key={dia} style={{ maxWidth: "80px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={dr?.tema || ""}>
+                            {dr?.tema ? <span style={{ color: "var(--accent)", fontSize: "11px" }}>{dr.tema.substring(0, 12)}{dr.tema.length > 12 ? "…" : ""}</span> : <span style={{ color: "rgba(255,255,255,0.06)" }}>—</span>}
                           </td>
                         );
                       })}

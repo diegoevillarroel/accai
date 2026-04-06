@@ -153,33 +153,31 @@ export function AccaiAI() {
     <div className="space-y-8">
       {/* FUNNEL ALERT */}
       {funnelAlert && (
-        <div className="border border-[#0C2DF5] bg-[#0C2DF5]/5 px-4 py-3 flex items-center justify-between">
-          <span className="font-mono text-xs text-[#0C2DF5]">{funnelAlert}</span>
+        <div style={{ background: "rgba(12,45,245,0.06)", border: "1px solid rgba(12,45,245,0.2)", borderRadius: "8px", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span className="font-mono text-xs" style={{ color: "var(--accent)" }}>{funnelAlert}</span>
           <div className="flex items-center gap-3">
             <button
               onClick={() => { setSelectedMode("CIERRE DM"); accaiStream.clear(); }}
-              className="text-[#0C2DF5] border border-[#0C2DF5] px-3 py-1 font-mono text-xs uppercase tracking-widest hover:bg-[#0C2DF5] hover:text-white transition-colors"
+              style={{ color: "var(--accent)", border: "1px solid var(--accent)", background: "transparent", padding: "4px 12px", fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer", transition: "background 150ms, color 150ms" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "white"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--accent)"; }}
             >
               IR A CIERRE DM
             </button>
-            <button onClick={() => setFunnelAlert(null)} className="text-[#666666] hover:text-white font-mono text-xs">✕</button>
+            <button onClick={() => setFunnelAlert(null)} style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", fontSize: "14px" }}>✕</button>
           </div>
         </div>
       )}
 
       {/* MODE SELECTOR */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className="vc-mode-tabs">
         {MODES.map(mode => (
           <button
             key={mode.id}
             onClick={() => { setSelectedMode(mode.id); accaiStream.clear(); }}
-            className={`p-3 text-left border transition-colors ${
-              selectedMode === mode.id
-                ? "border-[#0C2DF5] bg-[#0C2DF5]/10 text-white"
-                : "border-[#1A1A1A] bg-[#0D0D0D] text-[#666666] hover:border-[#333333] hover:text-white"
-            }`}
+            className={`vc-mode-tab${selectedMode === mode.id ? " active" : ""}`}
           >
-            <div className="font-mono text-[10px] uppercase tracking-wider leading-tight">{mode.label}</div>
+            {mode.label}
           </button>
         ))}
       </div>
@@ -187,11 +185,11 @@ export function AccaiAI() {
       <div className="grid grid-cols-3 gap-8">
         {/* LEFT: Input Panel */}
         <div className="col-span-1 space-y-4">
-          <div className="text-[#0C2DF5] font-mono text-xs uppercase tracking-widest">
-            // {currentMode?.label}
-          </div>
-          <div className="text-[#666666] font-mono text-[11px] leading-relaxed">
-            {currentMode?.description}
+          <div>
+            <div className="vc-section-title">// {currentMode?.label}</div>
+            <div style={{ color: "var(--text-muted)", fontFamily: "var(--font-body)", fontSize: "12px", lineHeight: 1.6, marginTop: "4px" }}>
+              {currentMode?.description}
+            </div>
           </div>
 
           {selectedMode === "AUTOPSIA" && (
@@ -312,10 +310,11 @@ export function AccaiAI() {
 
         {/* RIGHT: Response */}
         <div className="col-span-2 space-y-4">
-          <div className="text-[#666666] font-mono text-xs uppercase tracking-widest">// RESPUESTA</div>
+          <div className="vc-section-title">// RESPUESTA</div>
           <div
             ref={responseRef}
-            className="bg-[#0D0D0D] border border-[#1A1A1A] p-6 min-h-[400px] max-h-[600px] overflow-y-auto font-mono text-sm whitespace-pre-wrap leading-relaxed text-[#F0F0F0]"
+            className="vc-card"
+            style={{ minHeight: "400px", maxHeight: "600px", overflowY: "auto", fontFamily: "var(--font-display)", fontSize: "13px", whiteSpace: "pre-wrap", lineHeight: 1.8, color: "var(--text-primary)", padding: "24px" }}
             data-testid="div-accai-response"
           >
             {accaiStream.response ? (
@@ -334,27 +333,27 @@ export function AccaiAI() {
 
       {/* SESSION HISTORY */}
       <section>
-        <h2 className="text-[#0C2DF5] font-mono text-sm uppercase tracking-widest mb-6" data-testid="title-sessions">// HISTORIAL DE SESIONES</h2>
-        <div className="border border-[#1A1A1A]">
-          <table className="w-full text-sm text-left">
+        <div className="vc-section-title" data-testid="title-sessions">// HISTORIAL DE SESIONES</div>
+        <div style={{ background: "var(--glass)", border: "1px solid var(--glass-border)", borderRadius: "8px", overflow: "hidden" }}>
+          <table className="vc-table">
             <thead>
-              <tr className="border-b border-[#1A1A1A] text-[#666666] font-mono text-xs uppercase tracking-wider">
-                <th className="py-4 px-6 font-normal">Fecha</th>
-                <th className="py-4 px-6 font-normal">Modo</th>
-                <th className="py-4 px-6 font-normal">Respuesta</th>
+              <tr>
+                <th>Fecha</th>
+                <th>Modo</th>
+                <th>Respuesta</th>
               </tr>
             </thead>
-            <tbody className="font-mono">
+            <tbody style={{ fontFamily: "var(--font-body)" }}>
               {sessions.length === 0 ? (
-                <tr><td colSpan={3} className="py-8 text-center text-[#666666]">// Sin sesiones registradas</td></tr>
+                <tr><td colSpan={3} style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)", fontFamily: "var(--font-display)", fontSize: "11px" }}>// Sin sesiones registradas</td></tr>
               ) : (
-                sessions.slice(0, 20).map((session, idx) => (
-                  <tr key={session.id} className={idx % 2 === 0 ? "bg-[#0D0D0D]" : "bg-[#111111]"}>
-                    <td className="py-4 px-6 border-b border-[#1A1A1A] text-[#666666] whitespace-nowrap">{format(new Date(session.createdAt), "dd/MM/yy HH:mm")}</td>
-                    <td className="py-4 px-6 border-b border-[#1A1A1A]">
-                      <span className="text-[#0C2DF5] text-xs uppercase tracking-wider">{session.mode}</span>
+                sessions.slice(0, 20).map((session) => (
+                  <tr key={session.id}>
+                    <td style={{ color: "var(--text-muted)", whiteSpace: "nowrap", fontSize: "12px" }}>{format(new Date(session.createdAt), "dd/MM/yy HH:mm")}</td>
+                    <td>
+                      <span style={{ color: "var(--accent)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>{session.mode}</span>
                     </td>
-                    <td className="py-4 px-6 border-b border-[#1A1A1A] max-w-[400px] truncate text-[#666666] text-xs" title={session.response}>
+                    <td style={{ maxWidth: "400px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--text-secondary)", fontSize: "12px" }} title={session.response}>
                       {(session.response || "").substring(0, 120)}...
                     </td>
                   </tr>

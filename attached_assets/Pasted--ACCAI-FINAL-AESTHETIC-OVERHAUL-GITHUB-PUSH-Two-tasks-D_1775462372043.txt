@@ -1,0 +1,171 @@
+# ACCAI — FINAL: AESTHETIC OVERHAUL + GITHUB PUSH
+
+Two tasks. Do both. Push to GitHub last.
+
+---
+
+## TASK 1 — AESTHETIC OVERHAUL
+
+The app currently looks like a generic admin panel. Transform it into a premium dark interface that feels like Vercel's dashboard or Linear — clean, deep, intentional, with subtle glass depth. The user must feel sophistication the moment they open it.
+
+### Global Design Tokens (replace all existing theme/color values):
+
+```css
+:root {
+  --bg-base: #060608;
+  --bg-surface: rgba(255, 255, 255, 0.025);
+  --bg-surface-hover: rgba(255, 255, 255, 0.05);
+  --bg-elevated: rgba(255, 255, 255, 0.04);
+  --glass: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.07);
+  --glass-border-hover: rgba(255, 255, 255, 0.14);
+  --accent: #0C2DF5;
+  --accent-glow: rgba(12, 45, 245, 0.12);
+  --accent-subtle: rgba(12, 45, 245, 0.06);
+  --text-primary: rgba(255, 255, 255, 0.9);
+  --text-secondary: rgba(255, 255, 255, 0.4);
+  --text-muted: rgba(255, 255, 255, 0.18);
+  --danger: #FF2D20;
+  --success: #00CC66;
+  --warning: #CC8800;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+```
+
+### Apply to ALL cards, stat boxes, and panels:
+```css
+background: var(--glass);
+border: 1px solid var(--glass-border);
+backdrop-filter: blur(20px);
+-webkit-backdrop-filter: blur(20px);
+border-radius: 8px;
+transition: border-color 200ms ease, background 200ms ease;
+```
+On hover: border-color → var(--glass-border-hover), background → var(--bg-surface-hover).
+
+### Sidebar navigation:
+- Background: rgba(6, 6, 8, 0.9) with backdrop-filter: blur(40px)
+- Border-right: 1px solid var(--glass-border)
+- Logo "ACCAI™": 'Space Mono' font (import from Google Fonts if not already), 17px, white, letter-spacing 0.03em
+- "// VILLACLUB": 9px, var(--accent), uppercase, letter-spacing 0.2em, opacity 0.7
+- Nav items: 13px Inter, var(--text-secondary), padding 10px 20px, border-radius 6px
+- Active: var(--text-primary), background var(--accent-subtle), left border 2px var(--accent)
+- Hover (inactive): background var(--bg-surface-hover)
+- Smooth transition on all states: 150ms ease
+
+### All buttons:
+- Primary: bg var(--accent), white text, 12px, semibold, uppercase, letter-spacing 0.06em, padding 9px 20px, border-radius 6px, hover brightness(1.15)
+- Outlined: transparent bg, border 1px var(--accent), color var(--accent), hover bg var(--accent-subtle)
+- Ghost/muted: no bg, var(--text-secondary), 10px uppercase, hover var(--text-primary)
+
+### All tables:
+- Header: var(--text-muted), 10px uppercase, letter-spacing 0.1em, border-bottom 1px var(--glass-border)
+- Rows: alternate transparent / rgba(255,255,255,0.012)
+- Row hover: background var(--bg-surface-hover)
+- Smooth transition on hover: 100ms
+- Numbers: font-variant-numeric tabular-nums
+
+### All inputs and textareas:
+- Background: var(--glass)
+- Border: 1px solid var(--glass-border)
+- Border-radius: 6px
+- Focus: border-color var(--accent), box-shadow 0 0 0 2px var(--accent-glow)
+- Color: var(--text-primary)
+- Placeholder: var(--text-muted)
+- Transition: border-color 150ms, box-shadow 150ms
+
+### Section titles:
+All section titles start with "//" and use Space Mono.
+Example: "// INTELIGENCIA DE RENDIMIENTO"
+Style: 10px, uppercase, letter-spacing 0.12em, var(--text-muted), margin-bottom 16px.
+
+### Stat card numbers:
+- Value: Space Mono, 28px, font-weight 700, var(--text-primary)
+- Label: Inter, 9px, uppercase, letter-spacing 0.12em, var(--text-muted)
+- Accent line: left border 2px var(--accent) with subtle box-shadow -3px 0 10px var(--accent-glow)
+
+### Badges:
+- All badges: padding 3px 8px, 9px uppercase, letter-spacing 0.06em, border-radius 4px
+- CONVERTIDOR: bg rgba(12,45,245,0.1), color var(--accent), border 1px rgba(12,45,245,0.25)
+- VIRAL: bg rgba(204,136,0,0.08), color #CC8800, border 1px rgba(204,136,0,0.25)
+- EDUCATIVO: bg rgba(0,204,102,0.08), color #00CC66, border 1px rgba(0,204,102,0.25)
+- MUERTO: bg rgba(255,255,255,0.02), color var(--text-muted), border 1px rgba(255,255,255,0.04)
+
+### Mode tabs (ACCAI AI):
+- Row of tabs, gap 0, border-bottom 1px var(--glass-border)
+- Each: padding 10px 18px, 11px Inter semibold, uppercase, letter-spacing 0.05em
+- Inactive: var(--text-muted)
+- Active: var(--text-primary), border-bottom 2px var(--accent)
+- Hover: var(--text-secondary)
+
+### ACCAI Chat panel:
+- Background: rgba(6, 6, 8, 0.92) with backdrop-filter blur(40px)
+- Border-left: 1px solid var(--glass-border)
+- Messages from Diego: bg rgba(12,45,245,0.1), border 1px rgba(12,45,245,0.15), border-radius 8px
+- Messages from ACCAI: bg var(--glass), border 1px var(--glass-border), border-radius 8px
+- Input area: border-top 1px var(--glass-border), bg transparent
+
+### Password gate:
+- Background: var(--bg-base) with subtle radial gradient: radial-gradient(circle at 50% 40%, rgba(12,45,245,0.06) 0%, transparent 50%)
+- "ACCAI™": Space Mono, 44px, white
+- "// VILLACLUB INTERNAL": var(--accent), 9px, uppercase, letter-spacing 0.25em, opacity 0.6
+- Input and button: match design system above
+- The subtle blue ambient glow creates depth without being distracting
+
+### Loading states:
+Replace any "loading..." or spinner text with:
+```
+// sincronizando
+```
+In var(--accent), 10px, Space Mono, uppercase, with a CSS pulse animation (opacity 0.3 → 0.8 → 0.3, 1.5s ease infinite).
+
+### Empty states:
+Center in container: large "//" in 40px var(--text-muted), below: "Sin datos registrados" in 12px var(--text-secondary).
+
+### General spacing:
+- Consistent padding: 24px inside cards, 32px page margins
+- Gap between cards in grids: 16px
+- Gap between sections: 40px
+- Everything should breathe — generous whitespace
+
+### Micro-interactions:
+- All interactive elements: transition 150ms ease
+- Buttons: subtle scale(0.98) on active/click
+- No animations on page load — keep it fast and clean like Vercel
+
+Go through EVERY page (CUENTA, REELS, COMPETIDORES, ACCAI AI, PLAN 90D, THREADS) and the chat panel and apply these styles consistently. Remove any remnants of the old theme (hard whites, harsh borders, unstyled elements).
+
+---
+
+## TASK 2 — PUSH TO GITHUB
+
+After the aesthetic overhaul is complete:
+
+1. `git init` (if not already initialized)
+2. Create `.gitignore`:
+```
+node_modules/
+.env
+.env.local
+.next/
+dist/
+*.db
+.DS_Store
+```
+3. `git add .`
+4. `git commit -m "ACCAI v3 — production build"`
+5. `git remote add origin https://github.com/diegoevillarroel/accai.git`
+6. `git branch -M main`
+7. `git push -u origin main`
+
+If the remote already exists, use `git remote set-url origin` instead of `git remote add`.
+If push is rejected, use `git push -u origin main --force` (this is the first push, force is safe).
+
+Verify the push succeeded and all files are on GitHub.
