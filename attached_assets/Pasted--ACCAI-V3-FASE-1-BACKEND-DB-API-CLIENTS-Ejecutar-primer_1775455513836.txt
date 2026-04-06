@@ -1,0 +1,482 @@
+# ACCAI V3 — FASE 1: BACKEND, DB & API CLIENTS
+# Ejecutar primero. No pedir aclaraciones. Ejecutar directamente.
+
+---
+
+## FIX 0 — MODELO DE IA
+
+Find every instance of `claude-3-5-sonnet-20241022` or any other Claude model string in the entire codebase and replace with `claude-sonnet-4-20250514`. Do not change anything else in the API call logic.
+
+---
+
+## ENVIRONMENT VARIABLES
+
+Add these to .env (they will be set in Railway later):
+
+```
+DATABASE_URL=postgresql://...
+ANTHROPIC_API_KEY=sk-ant-...
+INSTAGRAM_APP_ID=
+INSTAGRAM_APP_SECRET=
+INSTAGRAM_PAGE_ID=
+INSTAGRAM_ACCOUNT_ID=
+INSTAGRAM_ACCESS_TOKEN=
+THREADS_APP_ID=
+THREADS_APP_SECRET=
+THREADS_ACCESS_TOKEN=
+THREADS_USER_ID=
+```
+
+---
+
+## DATABASE MIGRATIONS
+
+Run these SQL statements against the Railway PostgreSQL database directly (or via Prisma migration if the project uses Prisma):
+
+```sql
+-- Reels table: add new columns for Graph API data
+ALTER TABLE reels ADD COLUMN IF NOT EXISTS instagram_media_id TEXT UNIQUE;
+ALTER TABLE reels ADD COLUMN IF NOT EXISTS permalink TEXT;
+ALTER TABLE reels ADD COLUMN IF NOT EXISTS caption TEXT;
+ALTER TABLE reels ADD COLUMN IF NOT EXISTS watch_time_avg FLOAT;
+ALTER TABLE reels ADD COLUMN IF NOT EXISTS replays INTEGER DEFAULT 0;
+ALTER TABLE reels ADD COLUMN IF NOT EXISTS completion_rate FLOAT;
+ALTER TABLE reels ADD COLUMN IF NOT EXISTS synced_at TIMESTAMP;
+
+-- Competitors table: add new columns
+ALTER TABLE competitors ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE competitors ADD COLUMN IF NOT EXISTS engagement_rate_avg FLOAT;
+ALTER TABLE competitors ADD COLUMN IF NOT EXISTS last_synced TIMESTAMP;
+
+-- Comment cache table: new
+CREATE TABLE IF NOT EXISTS comment_cache (
+  id SERIAL PRIMARY KEY,
+  media_id TEXT NOT NULL,
+  instagram_comment_id TEXT UNIQUE,
+  username TEXT,
+  text TEXT,
+  comment_timestamp TIMESTAMP,
+  like_count INTEGER DEFAULT 0,
+  replied BOOLEAN DEFAULT FALSE,
+  reply_text TEXT,
+  category TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Threads posts table: new
+CREATE TABLE IF NOT EXISTS threads_posts (
+  id SERIAL PRIMARY KEY,
+  threads_media_id TEXT UNIQUE,
+  text_content TEXT,
+  permalink TEXT,
+  post_type TEXT,
+  likes INTEGER DEFAULT 0,
+  replies INTEGER DEFAULT 0,
+  reposts INTEGER DEFAULT 0,
+  quotes INTEGER DEFAULT 0,
+  views INTEGER DEFAULT 0,
+  engagement_rate FLOAT,
+  posted_at TIMESTAMP,
+  synced_at TIMESTAMP,
+  promoted_to_reel BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Token storage table: new (for auto-renewal tracking)
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id SERIAL PRIMARY KEY,
+  service TEXT NOT NULL UNIQUE,
+  access_token TEXT NOT NULL,
+  expires_at TIMESTAMP,
+  last_refreshed TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+## NEW FILE: /lib/instagram.ts
+
+Create a centralized Instagram Graph API client:
+
+```typescript
+const BASE = 'https://graph.facebook.com/v21.0';
+
+function getToken(): string {
+  return process.env.INSTAGRAM_ACCESS_TOKEN || '';
+}
+
+function getIgId(): string {
+  return process.env.INSTAGRAM_ACCOUNT_ID || '';
+}
+
+// Generic fetch with rate limit awareness
+export async function igFetch(endpoint: string, params: Record<string, string> = {}) {
+  const url = new URL(`${BASE}${endpoint}`);
+  url.searchParams.set('access_token', getToken());
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  
+  const res = await fetch(url.toString());
+  
+  // Check rate limit headers
+  const appUsage = res.headers.get('x-app-usage');
+  if (appUsage) {
+    try {
+      const usage = JSON.parse(appUsage);
+      if (usage.call_count > 85 || usage.total_cputime > 85 || usage.total_time > 85) {
+        console.warn('⚠️ Instagram API rate limit approaching:', usage);
+        // Return a flag that callers can check
+        const data = await res.json();
+        data._rateLimitWarning = true;
+        return data;
+      }
+    } catch (e) {}
+  }
+  
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(`IG API Error ${res.status}: ${JSON.stringify(error)}`);
+  }
+  return res.json();
+}
+
+// Get all media (paginated, handles cursor)
+export async function getAllMedia() {
+  let allMedia: any[] = [];
+  let endpoint = `/${getIgId()}/media`;
+  let params: Record<string, string> = {
+    fields: 'id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count',
+    limit: '50'
+  };
+  
+  while (true) {
+    const data = await igFetch(endpoint, params);
+    allMedia = allMedia.concat(data.data || []);
+    if (!data.paging?.cursors?.after) break;
+    params.after = data.paging.cursors.after;
+  }
+  return allMedia;
+}
+
+// Get insights for a single media object (reel)
+export async function getMediaInsights(mediaId: string) {
+  try {
+    return await igFetch(`/${mediaId}/insights`, {
+      metric: 'views,reach,saved,shares,likes,comments,ig_reels_avg_watch_time,clips_replays_count'
+    });
+  } catch (e) {
+    // Some media types don't support all metrics — return partial
+    console.warn(`Could not get full insights for ${mediaId}:`, e);
+    return { data: [] };
+  }
+}
+
+// Get account-level insights
+export async function getAccountInsights(period: string = 'day', since?: number, until?: number) {
+  const params: Record<string, string> = {
+    metric: 'reach,accounts_engaged,profile_views,follows_and_unfollows',
+    period
+  };
+  if (since) params.since = since.toString();
+  if (until) params.until = until.toString();
+  return igFetch(`/${getIgId()}/insights`, params);
+}
+
+// Get account profile info
+export async function getAccountProfile() {
+  return igFetch(`/${getIgId()}`, {
+    fields: 'id,username,name,biography,followers_count,follows_count,media_count'
+  });
+}
+
+// Business Discovery — competitor public data
+export async function getCompetitorData(username: string) {
+  const cleaned = username.replace('@', '');
+  return igFetch(`/${getIgId()}`, {
+    fields: `business_discovery.username(${cleaned}){username,name,biography,followers_count,media_count,media.limit(30){id,caption,media_type,timestamp,like_count,comments_count,permalink}}`
+  });
+}
+
+// Get comments on a media object
+export async function getMediaComments(mediaId: string) {
+  return igFetch(`/${mediaId}/comments`, {
+    fields: 'id,text,timestamp,username,like_count',
+    limit: '50'
+  });
+}
+
+// Reply to a comment
+export async function replyToComment(commentId: string, message: string) {
+  const url = `${BASE}/${commentId}/replies`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ message, access_token: getToken() })
+  });
+  return res.json();
+}
+
+// Get DM conversations
+export async function getConversations() {
+  return igFetch(`/${getIgId()}/conversations`, {
+    fields: 'id,participants,updated_time',
+    platform: 'instagram'
+  });
+}
+
+// Get messages in a conversation
+export async function getMessages(conversationId: string) {
+  return igFetch(`/${conversationId}/messages`, {
+    fields: 'id,message,from,created_time'
+  });
+}
+
+// Get online followers (hour-by-hour)
+export async function getOnlineFollowers() {
+  return igFetch(`/${getIgId()}/insights`, {
+    metric: 'online_followers',
+    period: 'lifetime'
+  });
+}
+
+// Delay utility for rate limiting
+export function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+```
+
+---
+
+## NEW FILE: /lib/threads.ts
+
+Create a centralized Threads API client:
+
+```typescript
+const BASE = 'https://graph.threads.net/v1.0';
+
+function getToken(): string {
+  return process.env.THREADS_ACCESS_TOKEN || '';
+}
+
+function getUserId(): string {
+  return process.env.THREADS_USER_ID || '';
+}
+
+export async function threadsFetch(endpoint: string, params: Record<string, string> = {}) {
+  const url = new URL(`${BASE}${endpoint}`);
+  url.searchParams.set('access_token', getToken());
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(`Threads API Error ${res.status}: ${JSON.stringify(error)}`);
+  }
+  return res.json();
+}
+
+// Get all user's threads posts
+export async function getAllThreads() {
+  return threadsFetch(`/${getUserId()}/threads`, {
+    fields: 'id,text,timestamp,permalink,media_type,shortcode,is_quote_post',
+    limit: '50'
+  });
+}
+
+// Get insights for a single thread post
+export async function getThreadInsights(threadId: string) {
+  return threadsFetch(`/${threadId}/insights`, {
+    metric: 'views,likes,replies,reposts,quotes'
+  });
+}
+
+// Get user profile
+export async function getThreadsProfile() {
+  return threadsFetch(`/${getUserId()}/threads_profile`, {
+    fields: 'id,username,name,threads_profile_picture_url,threads_biography'
+  });
+}
+
+// Publish a text thread (2-step: create container → publish)
+export async function publishThread(text: string) {
+  // Step 1: Create container
+  const containerRes = await fetch(`${BASE}/${getUserId()}/threads`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      media_type: 'TEXT',
+      text,
+      access_token: getToken()
+    })
+  });
+  const container = await containerRes.json();
+  if (!container.id) throw new Error('Failed to create thread container');
+  
+  // Step 2: Publish
+  const publishRes = await fetch(`${BASE}/${getUserId()}/threads_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      creation_id: container.id,
+      access_token: getToken()
+    })
+  });
+  return publishRes.json();
+}
+
+// Reply to a thread
+export async function replyToThread(threadId: string, text: string) {
+  const containerRes = await fetch(`${BASE}/${getUserId()}/threads`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      media_type: 'TEXT',
+      text,
+      reply_to_id: threadId,
+      access_token: getToken()
+    })
+  });
+  const container = await containerRes.json();
+  if (!container.id) throw new Error('Failed to create reply container');
+  
+  const publishRes = await fetch(`${BASE}/${getUserId()}/threads_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      creation_id: container.id,
+      access_token: getToken()
+    })
+  });
+  return publishRes.json();
+}
+
+// Search threads by keyword (requires threads_keyword_search permission)
+export async function searchThreads(query: string) {
+  return threadsFetch(`/${getUserId()}/threads_keyword_search`, {
+    q: query,
+    fields: 'id,text,timestamp,username,permalink'
+  });
+}
+
+// Get replies to a thread
+export async function getThreadReplies(threadId: string) {
+  return threadsFetch(`/${threadId}/replies`, {
+    fields: 'id,text,timestamp,username,like_count'
+  });
+}
+
+// Get conversation (full thread tree)
+export async function getThreadConversation(threadId: string) {
+  return threadsFetch(`/${threadId}/conversation`, {
+    fields: 'id,text,timestamp,username'
+  });
+}
+```
+
+---
+
+## NEW API ROUTES — INSTAGRAM
+
+### /api/instagram/sync (POST)
+
+Core sync endpoint. When called:
+1. Call getAllMedia() to get all media
+2. Filter for reels (media_type === 'VIDEO')
+3. For each reel, call getMediaInsights(mediaId) with 200ms delay between calls
+4. Check rate limit: if any response has _rateLimitWarning, stop sync and return partial results
+5. For each reel:
+   - If exists in DB (match by instagram_media_id): UPDATE metrics only. Do NOT overwrite tema, angulo, formato, transcripcion, notas
+   - If new: INSERT with all metrics, leave tema/angulo/formato/transcripcion/notas as NULL
+6. Parse insights response: extract value from each metric object in data array
+7. Recalculate percentage fields and firma classifications for all reels
+8. Return: { synced: number, new: number, updated: number, unclassified: number, rateLimitWarning: boolean, errors: string[] }
+
+### /api/instagram/sync-account (POST)
+
+1. Call getAccountProfile() → followers_count, media_count
+2. Call getAccountInsights('days_28') → reach, profile_views, follows
+3. Create new account_snapshot record
+4. Return the snapshot
+
+### /api/instagram/competitor (POST) — Body: { handle: string }
+
+1. Call getCompetitorData(handle)
+2. Update competitor record in DB with fresh data
+3. For each post: calculate engagement_rate = (likes + comments) / followers * 100
+4. Sort by engagement_rate desc
+5. Auto-import posts into competitor_reels table
+6. Return: profile + sorted posts
+
+### /api/instagram/comments/mine (GET) — Query: ?limit=20
+
+1. Get last {limit} reels from DB
+2. For each reel that has instagram_media_id, call getMediaComments(mediaId) with 200ms delay
+3. Store/update comments in comment_cache table
+4. Return all comments grouped by reel
+
+### /api/instagram/comments/reply (POST) — Body: { commentId, message }
+
+1. Call replyToComment(commentId, message)
+2. Update comment_cache: set replied = true, reply_text = message
+3. Return result
+
+### /api/instagram/conversations (GET)
+
+1. Call getConversations()
+2. Return list
+
+### /api/instagram/conversations/:id (GET)
+
+1. Call getMessages(conversationId)
+2. Return thread
+
+### /api/instagram/timing (GET)
+
+1. Call getOnlineFollowers()
+2. Parse hour-by-hour data
+3. Identify top 3 posting windows
+4. Return: hourly data + recommended windows
+
+### /api/instagram/token-status (GET)
+
+1. Call Graph API debug_token endpoint to check token expiry
+2. Return: { valid: boolean, expires_at: string, days_remaining: number }
+
+---
+
+## NEW API ROUTES — THREADS
+
+### /api/threads/sync (POST)
+
+1. Call getAllThreads()
+2. For each thread, call getThreadInsights(threadId) with 200ms delay
+3. Upsert into threads_posts table
+4. Calculate engagement_rate for each post
+5. Return: { synced: number, new: number, updated: number }
+
+### /api/threads/publish (POST) — Body: { text: string }
+
+1. Call publishThread(text)
+2. Return: { success, threadId, permalink }
+
+### /api/threads/search (POST) — Body: { query: string }
+
+1. Call searchThreads(query)
+2. Return results
+
+### /api/threads/replies/:id (GET)
+
+1. Call getThreadReplies(threadId)
+2. Return replies
+
+---
+
+## VERIFY AFTER THIS PHASE
+
+Test these endpoints manually by visiting them in the browser or calling from the Replit shell:
+- GET /api/instagram/token-status → should return valid: true
+- POST /api/instagram/sync → should return synced reels count
+- POST /api/threads/sync → should return synced threads count
+- GET /api/instagram/timing → should return hourly data
+
+Only proceed to Phase 2 after these all return valid data.

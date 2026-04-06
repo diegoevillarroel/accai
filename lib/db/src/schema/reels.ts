@@ -6,6 +6,7 @@ import {
   real,
   timestamp,
   date,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -32,6 +33,13 @@ export const reelsTable = pgTable("reels", {
   transcripcion: text("transcripcion"),
   notas: text("notas"),
   firma: text("firma").notNull(),
+  instagramMediaId: text("instagram_media_id").unique(),
+  permalink: text("permalink"),
+  caption: text("caption"),
+  watchTimeAvg: doublePrecision("watch_time_avg"),
+  replays: integer("replays").default(0),
+  completionRate: doublePrecision("completion_rate"),
+  syncedAt: timestamp("synced_at"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

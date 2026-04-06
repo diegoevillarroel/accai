@@ -4,6 +4,7 @@ import {
   text,
   integer,
   timestamp,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -14,6 +15,9 @@ export const competitorsTable = pgTable("competitors", {
   nicho: text("nicho").notNull(),
   followersApprox: integer("followers_approx"),
   notas: text("notas"),
+  bio: text("bio"),
+  engagementRateAvg: doublePrecision("engagement_rate_avg"),
+  lastSynced: timestamp("last_synced"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
