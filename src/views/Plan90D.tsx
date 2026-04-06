@@ -128,7 +128,7 @@ export function Plan90D() {
             let currentVal = 0;
             if (k.key === "viewsGoal") currentVal = avgViews;
             if (k.key === "savesPer1kGoal") currentVal = avgSavesPer1k;
-            if (k.key === "followersGoal" && latestSnapshot) currentVal = latestSnapshot.followersGained;
+            if (k.key === "followersGoal" && latestSnapshot && latestSnapshot.id > 0) currentVal = latestSnapshot.followersGained;
             if (k.key === "reelsPerWeekGoal") currentVal = reels.length > 0 ? reels.length / 13 : 0;
 
             const status = goalVal > 0 ? getMetricStatus(currentVal, goalVal) : "neutral";

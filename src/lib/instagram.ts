@@ -8,6 +8,17 @@ function getIgId(): string {
   return process.env.INSTAGRAM_ACCOUNT_ID || '';
 }
 
+/** Devuelve mensaje si falta configuración; si no, null. */
+export function getInstagramEnvError(): string | null {
+  if (!getToken().trim()) {
+    return 'Define INSTAGRAM_ACCESS_TOKEN en el entorno (Railway).';
+  }
+  if (!getIgId().trim()) {
+    return 'Define INSTAGRAM_ACCOUNT_ID (ID de usuario de Instagram conectado a la app).';
+  }
+  return null;
+}
+
 export async function igFetch(endpoint: string, params: Record<string, string> = {}) {
   const url = new URL(`${BASE}${endpoint}`);
   url.searchParams.set('access_token', getToken());

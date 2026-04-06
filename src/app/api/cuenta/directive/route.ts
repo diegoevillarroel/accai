@@ -6,7 +6,15 @@ import { serialize } from "@/lib/serialize";
 
 export async function GET() {
   const [directive] = await db.select().from(strategicDirectiveTable).orderBy(desc(strategicDirectiveTable.createdAt)).limit(1);
-  if (!directive) return NextResponse.json({ error: "No directive found" }, { status: 404 });
+  if (!directive) {
+    return NextResponse.json(
+      GetDirectiveResponse.parse({
+        id: 0,
+        content: "",
+        createdAt: new Date(0).toISOString(),
+      })
+    );
+  }
   return NextResponse.json(GetDirectiveResponse.parse(serialize(directive)));
 }
 

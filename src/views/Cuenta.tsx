@@ -39,6 +39,7 @@ export function Cuenta() {
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [timing, setTiming] = useState<TimingData | null>(null);
   const [timingLoading, setTimingLoading] = useState(false);
+  const [timingError, setTimingError] = useState<string | null>(null);
   const [profile, setProfile] = useState<{ username?: string; followers_count?: number; media_count?: number; profile_picture_url?: string } | null>(null);
 
   useEffect(() => {
@@ -47,15 +48,34 @@ export function Cuenta() {
 
   useEffect(() => {
     setTimingLoading(true);
+    setTimingError(null);
     fetch("/api/instagram/timing")
-      .then(r => r.json())
-      .then(d => setTiming(d))
-      .catch(() => {})
+      .then(async r => {
+        const d = await r.json();
+        if (!r.ok) {
+          setTiming(null);
+          setTimingError(typeof d.error === "string" ? d.error : `Error ${r.status}`);
+          return;
+        }
+        const hourly = Array.isArray(d.hourly) ? d.hourly : [];
+        const rec = Array.isArray(d.recommendedWindows) ? d.recommendedWindows : [];
+        if (hourly.length === 0 && rec.length === 0 && d.error) {
+          setTiming(null);
+          setTimingError(d.error);
+          return;
+        }
+        setTiming({ hourly, recommendedWindows: rec });
+      })
+      .catch(() => {
+        setTiming(null);
+        setTimingError("No se pudo cargar el timing de audiencia.");
+      })
       .finally(() => setTimingLoading(false));
-    // Fetch IG profile
     fetch("/api/instagram/profile")
-      .then(r => r.json())
-      .then(d => { if (d.username) setProfile(d); })
+      .then(async r => {
+        const d = await r.json();
+        if (r.ok && d && typeof d.username === "string") setProfile(d);
+      })
       .catch(() => {});
   }, []);
 
@@ -98,12 +118,15 @@ export function Cuenta() {
     });
   };
 
+  const hourlySafe = timing?.hourly ?? [];
+  const windowsSafe = timing?.recommendedWindows ?? [];
   const allHours = Array.from({ length: 24 }, (_, i) => {
-    const d = timing?.hourly.find(h => h.hour === i);
+    const d = hourlySafe.find(h => h.hour === i);
     return { hour: i, avg: d?.avg ?? 0 };
   });
   const maxAvg = Math.max(...allHours.map(h => h.avg), 1);
-  const top3Hours = new Set(timing?.recommendedWindows.slice(0, 3).map(w => w.hour) ?? []);
+  const top3Hours = new Set(windowsSafe.slice(0, 3).map(w => w.hour));
+  const hasSnapshot = Boolean(latestSnapshot && latestSnapshot.id > 0);
 
   return (
     <div className="space-y-12">
@@ -158,10 +181,10 @@ export function Cuenta() {
       {/* STAT CARDS */}
       <div className="grid grid-cols-4 gap-4">
         {[
-          { label: "Views Totales", testId: "text-stat-views", val: latestSnapshot?.views.toLocaleString() ?? null, color: "var(--text-primary)" },
-          { label: "Seguidores Ganados", testId: "text-stat-followers", val: latestSnapshot ? `+${latestSnapshot.followersGained.toLocaleString()}` : null, color: "var(--success)" },
-          { label: "Visitas al Perfil", testId: "text-stat-visits", val: latestSnapshot?.profileVisits.toLocaleString() ?? null, color: "var(--text-primary)" },
-          { label: "Conversión", testId: "text-stat-conversion", val: latestSnapshot ? `${latestSnapshot.conversionPct.toFixed(1)}%` : null, color: "var(--vc-accent)" },
+          { label: "Views Totales", testId: "text-stat-views", val: hasSnapshot ? latestSnapshot!.views.toLocaleString() : null, color: "var(--text-primary)" },
+          { label: "Seguidores Ganados", testId: "text-stat-followers", val: hasSnapshot ? `+${latestSnapshot!.followersGained.toLocaleString()}` : null, color: "var(--success)" },
+          { label: "Visitas al Perfil", testId: "text-stat-visits", val: hasSnapshot ? latestSnapshot!.profileVisits.toLocaleString() : null, color: "var(--text-primary)" },
+          { label: "Conversión", testId: "text-stat-conversion", val: hasSnapshot ? `${latestSnapshot!.conversionPct.toFixed(1)}%` : null, color: "var(--vc-accent)" },
         ].map(({ label, testId, val, color }) => (
           <div key={testId} className="vc-stat-card">
             <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--text-muted)", fontFamily: "var(--font-body)", marginBottom: "8px" }}
@@ -179,7 +202,11 @@ export function Cuenta() {
         <h2 className="vc-section-title" style={{ marginBottom: "20px" }}>// MEJOR HORA PARA PUBLICAR</h2>
         {timingLoading ? (
           <div className="loading-pulse">// cargando datos de audiencia...</div>
-        ) : timing && timing.hourly.length > 0 ? (
+        ) : timingError ? (
+          <div className="vc-card" style={{ color: "var(--text-muted)", fontSize: "11px", fontFamily: "var(--font-display)", lineHeight: 1.5 }}>
+            // Instagram: {timingError}
+          </div>
+        ) : timing && hourlySafe.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {/* 24 vertical bars */}
             <div style={{ display: "flex", alignItems: "flex-end", gap: "4px", height: "120px", paddingBottom: "4px" }}>
@@ -219,7 +246,7 @@ export function Cuenta() {
 
             {/* Top 3 windows */}
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              {timing.recommendedWindows.slice(0, 3).map((w, i) => (
+              {windowsSafe.slice(0, 3).map((w, i) => (
                 <div key={w.hour} className="vc-card" style={{ flex: 1, minWidth: "160px", padding: "16px" }}>
                   <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-muted)", fontFamily: "var(--font-display)", marginBottom: "6px" }}>
                     VENTANA ÓPTIMA #{i + 1}

@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { getOnlineFollowers } from "@/lib/instagram";
+import { getInstagramEnvError, getOnlineFollowers } from "@/lib/instagram";
 
 export async function GET() {
+  const envErr = getInstagramEnvError();
+  if (envErr) {
+    return NextResponse.json({ error: envErr, hourly: [], recommendedWindows: [] }, { status: 503 });
+  }
   try {
     const data = await getOnlineFollowers();
     const hourlyData = data?.data?.[0]?.values || [];
@@ -33,7 +37,11 @@ export async function GET() {
     }));
 
     return NextResponse.json({ hourly: avgByHour, recommendedWindows: topWindows, raw: data });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    return NextResponse.json(
+      { error: message, hourly: [], recommendedWindows: [] },
+      { status: 502 }
+    );
   }
 }
