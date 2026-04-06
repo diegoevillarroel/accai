@@ -50,7 +50,7 @@ async function buildChatContext(): Promise<string> {
   return `[CONTEXTO CHAT — DATOS LIVE]
 
 ÚLTIMOS 10 REELS:
-${reels.map(r => `- ${r.fecha} | ${r.tema ?? "?"} | ${r.angulo ?? "?"} | Views:${r.views} | Saves:${r.savesPct.toFixed(1)}% | Firma:${r.firma}`).join("\n")}
+${reels.map(r => `- ${r.fecha} | ${r.tema ?? "?"} | ${r.angulo ?? "?"} | Views:${r.views} | Saves:${r.savesPct.toFixed(1)}% | Firma:${r.firma}${r.transcripcion ? ` | Transcripcion: "${r.transcripcion.slice(0, 200)}"` : ""}`).join("\n")}
 
 BALANCE DE FUNNEL (10 reels más recientes):
 ${JSON.stringify(funnelPct)} — Objetivo: 40% Autoridad/35% Confianza/25% Conversión
@@ -113,10 +113,10 @@ ${latestSnapshot[0] ? `Views: ${latestSnapshot[0].views} | Seguidores ganados: $
 ${reels.map((r) => `- ${r.fecha} | ${r.tema} | ${r.angulo} | Views: ${r.views} | SavesPct: ${r.savesPct.toFixed(1)}% | S/1K: ${r.savesPer1k.toFixed(2)} | Firma: ${r.firma}`).join("\n")}
 
 TOP 5 POR SAVES:
-${top5Saves.map((r) => `- ${r.tema} | SavesPct: ${r.savesPct.toFixed(1)}%`).join("\n")}
+${top5Saves.map((r) => `- ${r.tema} | SavesPct: ${r.savesPct.toFixed(1)}%${r.transcripcion ? `\n  TRANSCRIPCION: ${r.transcripcion}` : ""}`).join("\n")}
 
 BOTTOM 5 POR VIEWS:
-${bottom5Views.map((r) => `- ${r.tema} | Views: ${r.views}`).join("\n")}
+${bottom5Views.map((r) => `- ${r.tema} | Views: ${r.views}${r.transcripcion ? `\n  TRANSCRIPCION: ${r.transcripcion}` : ""}`).join("\n")}
 
 DISTRIBUCIÓN POR ÁNGULO: ${JSON.stringify(anguloCount)}
 DISTRIBUCIÓN POR FIRMA: ${JSON.stringify(firmaCount)}
@@ -168,6 +168,8 @@ const CHAT_MODE_ADDITION = `
 
 Modo CHAT. Eres ACCAI en modo conversacional directo con Diego Villarroel.
 
+Tienes acceso a las transcripciones de los reels de Diego y de sus competidores. Cuando generes hooks o conceptos de contenido, basa tus sugerencias en los PATRONES LINGÜÍSTICOS que han demostrado generar saves y engagement en el mercado venezolano según la data real. No inventes — extrae de lo que ya funcionó y recombina.
+
 REGLAS ABSOLUTAS:
 1. Máximo 5 líneas por respuesta. Diego quiere velocidad, no ensayos. Si necesita profundidad, abrirá un modo específico.
 2. Tienes acceso al contexto completo inyectado: reels recientes con métricas, balance de funnel, comentarios frecuentes, directiva estratégica, posts de Threads con engagement. ÚSALO en cada respuesta.
@@ -191,6 +193,20 @@ const MODE_PROMPTS: Record<string, string> = {
     "Modo FUNNEL CHECK. Evalúa el mix de contenido de las últimas 2 semanas. Clasifica cada reel en: Autoridad (instalar quién es Diego), Confianza (prueba y casos), Conversión (activar compra). Determina el porcentaje actual en cada fase. El balance objetivo es 40% Autoridad / 35% Confianza / 25% Conversión para fase de crecimiento. Indica desequilibrio y qué tipo de pieza producir para corregirlo.",
   CIERRE:
     "Modo CIERRE. Recibes un fragmento de conversación de DM o WhatsApp con un prospecto. Ejecuta: 1) Identifica el avatar (Buscador o Operador Estancado) y justifica en una línea. 2) Identifica la fase actual del cierre: Investigación / Apertura / Dolor / Gap / Calificación / Enrutamiento / Gameplan / Cierre. 3) Genera la respuesta exacta que Diego debe enviar — en su tono, con su vocabulario, lista para copiar y pegar. 4) Si el prospecto no está listo para cerrar, indica qué información extraer antes de avanzar. Tono: Diego Villarroel. Sin coaching, sin suavización, sin explicaciones innecesarias al prospecto.",
+  PATRONES:
+    `Modo PATRONES. Analiza TODAS las transcripciones disponibles (propias y de competidores) cruzadas con métricas de engagement. Identifica:
+
+1. HOOKS QUE ABREN SAVES: Las primeras 10 palabras de los reels con mayor save rate. ¿Qué patrón lingüístico comparten? ¿Pregunta, afirmación, número, contraste?
+
+2. VOCABULARIO DE CONVERSIÓN: Palabras y frases que aparecen consistentemente en reels de alto engagement pero NO en reels de bajo engagement.
+
+3. ESTRUCTURA GANADORA: ¿Los reels exitosos siguen problema→solución, dato→implicación, pregunta→respuesta? ¿Cuál estructura domina?
+
+4. BRECHAS LINGÜÍSTICAS: Palabras/temas que los competidores usan con éxito que Diego no ha usado.
+
+5. FÓRMULA REPLICABLE: Basándote en todo lo anterior, dame exactamente: el hook de apertura (palabras exactas), la estructura del cuerpo, y el CTA — para un reel que maximice saves esta semana.
+
+Output: diagnóstico frío, datos concretos, fórmula ejecutable. Sin teoría.`,
 };
 
 router.post("/accai/stream", async (req, res): Promise<void> => {

@@ -43,6 +43,9 @@ export function Reels() {
   const [classifying, setClassifying] = useState(false);
   const [classifiedCount, setClassifiedCount] = useState(0);
 
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribeMsg, setTranscribeMsg] = useState<string | null>(null);
+
   const [expandedReelId, setExpandedReelId] = useState<number | null>(null);
   const [quickForm, setQuickForm] = useState({ tema: "", angulo: "", formato: "" });
   const [savingQuick, setSavingQuick] = useState(false);
@@ -80,6 +83,42 @@ export function Reels() {
       queryClient.invalidateQueries({ queryKey: getGetReelsStatsQueryKey() });
     } catch {}
     setSyncing(false);
+  };
+
+  const handleTranscribeAll = async () => {
+    setTranscribing(true);
+    setTranscribeMsg("// iniciando transcripción...");
+    try {
+      const r = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batch: true }),
+      });
+      const d = await r.json();
+      if (d.error) {
+        setTranscribeMsg(`// error: ${d.error}`);
+      } else {
+        setTranscribeMsg(`// ${d.transcribed} reels transcritos — ACCAI ahora tiene contexto completo`);
+        queryClient.invalidateQueries({ queryKey: getListReelsQueryKey() });
+      }
+    } catch (e: any) {
+      setTranscribeMsg(`// error: ${e.message}`);
+    }
+    setTranscribing(false);
+  };
+
+  const handleTranscribeSingle = async (reelId: number) => {
+    try {
+      const r = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reelId }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        queryClient.invalidateQueries({ queryKey: getListReelsQueryKey() });
+      }
+    } catch {}
   };
 
   const handleAutoClassify = async () => {
@@ -308,12 +347,25 @@ export function Reels() {
             <Button
               onClick={handleAutoClassify}
               disabled={classifying}
-              className="ml-auto bg-transparent border border-[#0C2DF5] text-[#0C2DF5] hover:bg-[#0C2DF5] hover:text-white rounded-none uppercase tracking-widest font-mono text-xs h-9 px-4"
+              className="bg-transparent border border-[#0C2DF5] text-[#0C2DF5] hover:bg-[#0C2DF5] hover:text-white rounded-none uppercase tracking-widest font-mono text-xs h-9 px-4"
             >
               {classifying ? `// clasificando ${classifiedCount}/${unclassifiedCount}...` : "ACCAI CLASIFICAR"}
             </Button>
           )}
+          <Button
+            onClick={handleTranscribeAll}
+            disabled={transcribing}
+            className="ml-auto bg-transparent border border-[#666666] text-[#666666] hover:border-[#0C2DF5] hover:text-[#0C2DF5] rounded-none uppercase tracking-widest font-mono text-xs h-9 px-4"
+            title="Transcribe todos los reels vía Apify (requiere APIFY_API_TOKEN)"
+          >
+            {transcribing ? "// transcribiendo..." : "TRANSCRIBIR TODO"}
+          </Button>
         </div>
+        {transcribeMsg && (
+          <div className={`mt-2 font-mono text-xs ${transcribeMsg.includes("error") ? "text-[#FF2D20]" : "text-[#00CC66]"}`}>
+            {transcribeMsg}
+          </div>
+        )}
 
         {/* Rate limit banner */}
         {syncResult?.rateLimitWarning && (

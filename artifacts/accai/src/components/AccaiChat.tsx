@@ -9,6 +9,7 @@ interface ChatMessage {
 interface AccaiChatProps {
   open: boolean;
   onClose: () => void;
+  onOpen: () => void;
 }
 
 function formatCost(input: number, output: number): string {
@@ -16,7 +17,7 @@ function formatCost(input: number, output: number): string {
   return `$${cost.toFixed(4)}`;
 }
 
-export function AccaiChat({ open, onClose }: AccaiChatProps) {
+export function AccaiChat({ open, onClose, onOpen }: AccaiChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -154,7 +155,7 @@ export function AccaiChat({ open, onClose }: AccaiChatProps) {
     <>
       {/* Floating trigger button */}
       <button
-        onClick={() => (open ? onClose() : null)}
+        onClick={onOpen}
         style={{
           position: "fixed",
           bottom: "28px",

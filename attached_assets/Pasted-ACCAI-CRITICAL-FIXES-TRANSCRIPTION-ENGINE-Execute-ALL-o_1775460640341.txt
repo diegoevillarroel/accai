@@ -1,0 +1,192 @@
+ACCAI — CRITICAL FIXES + TRANSCRIPTION ENGINE
+Execute ALL of these. They are ordered by priority.
+
+FIX 1 — ACCAI CHAT NOT OPENING
+The floating ACCAI Chat button (bottom-right blue circle) does not open the chat panel.
+Debug checklist:
+
+Verify the AccaiChat component is imported and mounted in the ROOT layout (layout.tsx or _app.tsx) — it must render on every page, not inside a specific module
+Verify the component has a useState for isOpen that toggles on button click
+Verify the panel div has: position fixed, right 0, top 0, height 100vh, z-index 50+, and transitions from translateX(100%) to translateX(0)
+Verify the Ctrl+Shift+K (Cmd+Shift+K) keyboard listener is added with useEffect on the root layout, not inside the chat component
+Test: clicking the blue circle should toggle isOpen. The panel should slide in from the right.
+
+Fix whatever is broken. Test the chat end-to-end: open panel → type message → hit Enter → should call /api/accai with mode "chat" → stream response.
+
+FIX 2 — REEL THUMBNAILS NOT LOADING
+In /lib/instagram.ts, in the getAllMedia() function, the fields parameter must include thumbnail_url.
+Current fields string probably looks like:
+'id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count'
+Change to:
+'id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count,thumbnail_url'
+In the Instagram sync endpoint (/api/instagram/sync), store thumbnail_url in the reels table.
+If the reels table doesn't have a thumbnail_url column, add it:
+sqlALTER TABLE reels ADD COLUMN IF NOT EXISTS thumbnail_url TEXT;
+In the REELS table UI, the first column should be a 48x48 thumbnail:
+
+If thumbnail_url exists: <img src={thumbnail_url} className="w-12 h-12 object-cover" style="border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);" />
+If null: show a Film icon from Lucide, 24px, centered in a 48x48 box with rgba(255,255,255,0.05) background
+
+
+MAJOR FEATURE — TRANSCRIPTION ENGINE (Apify Integration)
+Overview
+This is the most critical missing piece. ACCAI needs to know WHAT WAS SAID in every reel — Diego's AND competitors'. Without transcriptions, the AI cannot analyze hooks, word patterns, or generate content based on what actually works.
+New environment variable
+APIFY_API_TOKEN=apify_api_...
+(Diego gets this from https://console.apify.com/account/integrations)
+New file: /lib/apify.ts
+typescriptconst APIFY_TOKEN = process.env.APIFY_API_TOKEN;
+
+// Transcribe a single Instagram reel by URL
+export async function transcribeReel(reelUrl: string): Promise<{ transcript: string; language: string } | null> {
+  if (!APIFY_TOKEN) return null;
+  
+  try {
+    const response = await fetch(
+      'https://api.apify.com/v2/acts/bulletproof~instagram-transcript-extractor/run-sync-get-dataset-items?token=' + APIFY_TOKEN,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          urls: [reelUrl],
+          format: 'json',
+          includeMetadata: false
+        })
+      }
+    );
+    
+    if (!response.ok) {
+      console.error('Apify transcription failed:', response.status);
+      return null;
+    }
+    
+    const results = await response.json();
+    if (results && results.length > 0) {
+      const item = results[0];
+      // The actor returns fullText or segments depending on format
+      const transcript = item.fullText || item.text || 
+        (item.segments ? item.segments.map((s: any) => s.text).join(' ') : '');
+      return {
+        transcript: transcript.trim(),
+        language: item.language || 'es'
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error('Transcription error:', error);
+    return null;
+  }
+}
+
+// Batch transcribe multiple reels
+export async function transcribeReels(reelUrls: string[]): Promise<Map<string, string>> {
+  const results = new Map<string, string>();
+  
+  for (const url of reelUrls) {
+    const result = await transcribeReel(url);
+    if (result && result.transcript) {
+      results.set(url, result.transcript);
+    }
+    // Small delay between calls to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  
+  return results;
+}
+New API route: POST /api/transcribe
+Body: { reelId?: number, url?: string, batch?: boolean }
+Single reel mode (reelId or url provided):
+
+Get the reel from DB (or use provided URL)
+Call transcribeReel(permalink)
+Store transcript in the reels table transcripcion field
+Return: { success: true, transcript: string }
+
+Batch mode (batch: true):
+
+Get all reels from DB where transcripcion IS NULL AND permalink IS NOT NULL
+For each, call transcribeReel(permalink)
+Store transcripts in DB
+Return: { transcribed: number, failed: number, errors: string[] }
+
+New API route: POST /api/transcribe/competitor
+Body: { competitorReelId: number }
+
+Get the competitor reel from competitor_reels table
+Call transcribeReel(url)
+Store in competitor_reels.transcripcion field
+Return: { success: true, transcript: string }
+
+New API route: POST /api/transcribe/competitor-batch
+Body: { competitorId: number } (transcribe all reels from one competitor)
+
+Get all competitor_reels for this competitor where transcripcion IS NULL AND url IS NOT NULL
+Transcribe each
+Store results
+Return: { transcribed: number, failed: number }
+
+
+UI — REELS module: Add transcription controls
+In the sync bar at top, add a third button:
+[SINCRONIZAR] [ACCAI CLASIFICAR] [TRANSCRIBIR TODO]
+"TRANSCRIBIR TODO" button (outlined style):
+
+Calls POST /api/transcribe with batch: true
+Shows progress: "// transcribiendo... 12/47 reels"
+After completion: "// 47 reels transcritos — ACCAI ahora tiene contexto completo"
+
+In each reel detail view:
+
+If transcripcion exists: show it in a glass card with Space Mono font, 13px
+If transcripcion is null and permalink exists: show "TRANSCRIBIR" button
+
+Calls POST /api/transcribe with reelId
+On success, display the transcript inline
+
+
+
+
+UI — COMPETIDORES module: Add transcription
+Per-competitor: "TRANSCRIBIR REELS" button
+After syncing a competitor (which imports their posts), show:
+"// {N} videos sin transcripción — [TRANSCRIBIR]"
+Clicking calls POST /api/transcribe/competitor-batch.
+Shows progress.
+In competitor reel detail view:
+Same as own reels — show transcript if exists, "TRANSCRIBIR" button if not.
+
+ACCAI AI Context Enhancement
+Now that transcriptions exist, update the context builder for ALL ACCAI modes:
+In the context builder function (the one that assembles [CONTEXTO VILLACLUB LIVE]):
+
+For own reels: include the transcripcion field (truncated to first 200 chars per reel to manage context size)
+For top 5 reels by saves: include FULL transcription
+For bottom 5 reels by views: include FULL transcription
+For competitor reels: include transcription for top 5 by engagement
+
+This means when Diego asks ACCAI "qué grabo", the AI knows not just metrics but EXACTLY what was said in every reel that performed well and every reel that flopped. The difference between a hook that gets 50k views and one that gets 500 is often 3 words. Now ACCAI can see those 3 words.
+
+ACCAI Chat — enhanced with transcription awareness
+Add to the chat system prompt:
+Tienes acceso a las transcripciones de los reels de Diego y de sus competidores. 
+Cuando generes hooks o conceptos de contenido, basa tus sugerencias en los PATRONES LINGÜÍSTICOS 
+que han demostrado generar saves y engagement en el mercado venezolano según la data real. 
+No inventes — extrae de lo que ya funcionó y recombina.
+
+New ACCAI Mode: PATRONES (8th tab)
+UI: No input needed. Button only: "ANALIZAR PATRONES"
+System prompt addition:
+Modo PATRONES. Analiza TODAS las transcripciones disponibles (propias y de competidores) cruzadas con métricas de engagement. Identifica:
+
+1. HOOKS QUE ABREN SAVES: Las primeras 10 palabras de los reels con mayor save rate. ¿Qué patrón lingüístico comparten? ¿Pregunta, afirmación, número, contraste?
+
+2. VOCABULARIO DE CONVERSIÓN: Palabras y frases que aparecen consistentemente en reels de alto engagement pero NO en reels de bajo engagement.
+
+3. ESTRUCTURA GANADORA: ¿Los reels exitosos siguen problema→solución, dato→implicación, pregunta→respuesta? ¿Cuál estructura domina?
+
+4. BRECHAS LINGÜÍSTICAS: Palabras/temas que los competidores usan con éxito que Diego no ha usado.
+
+5. FÓRMULA REPLICABLE: Basándote en todo lo anterior, dame exactamente: el hook de apertura (palabras exactas), la estructura del cuerpo, y el CTA — para un reel que maximice saves esta semana.
+
+Output: diagnóstico frío, datos concretos, fórmula ejecutable. Sin teoría.
+This mode is the weapon. It reverse-engineers viral patterns from real transcription data. Nobody in Venezuela has this capability.

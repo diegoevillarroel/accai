@@ -38,6 +38,8 @@ export function Competidores() {
 
   const [syncingHandle, setSyncingHandle] = useState<string | null>(null);
   const [syncMsg, setSyncMsg] = useState<{handle: string; msg: string} | null>(null);
+  const [transcribingId, setTranscribingId] = useState<number | null>(null);
+  const [transcribeMsg, setTranscribeMsg] = useState<{id: number; msg: string} | null>(null);
 
   const brechasStream = useAccaiStream();
 
@@ -96,6 +98,28 @@ export function Competidores() {
       setSyncMsg({ handle, msg: `// error: ${e.message}` });
     }
     setSyncingHandle(null);
+  };
+
+  const handleTranscribeBatch = async (competitorId: number) => {
+    setTranscribingId(competitorId);
+    setTranscribeMsg(null);
+    try {
+      const r = await fetch("/api/transcribe/competitor-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ competitorId }),
+      });
+      const d = await r.json();
+      if (d.error) {
+        setTranscribeMsg({ id: competitorId, msg: `// error: ${d.error}` });
+      } else {
+        setTranscribeMsg({ id: competitorId, msg: `// ${d.transcribed} transcritos / ${d.failed} fallaron` });
+        queryClient.invalidateQueries({ queryKey: getListCompetitorReelsQueryKey() });
+      }
+    } catch (e: any) {
+      setTranscribeMsg({ id: competitorId, msg: `// error: ${e.message}` });
+    }
+    setTranscribingId(null);
   };
 
   const handleSaveReel = (e: React.FormEvent) => {
@@ -206,7 +230,7 @@ export function Competidores() {
                     <td className="py-4 px-6 border-b border-[#1A1A1A]">{comp.nicho}</td>
                     <td className="py-4 px-6 border-b border-[#1A1A1A]">{comp.followersApprox?.toLocaleString() || "-"}</td>
                     <td className="py-4 px-6 border-b border-[#1A1A1A]">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <button
                           onClick={() => handleSyncCompetitor(comp.handle)}
                           disabled={syncingHandle === comp.handle}
@@ -215,6 +239,25 @@ export function Competidores() {
                         >
                           <RefreshCw size={14} className={syncingHandle === comp.handle ? "animate-spin" : ""} />
                         </button>
+                        {(() => {
+                          const compReelsForComp = competitorReels.filter(r => r.competitorId === comp.id);
+                          const untranscribed = compReelsForComp.filter(r => !r.transcripcion && r.url).length;
+                          return untranscribed > 0 ? (
+                            <button
+                              onClick={() => handleTranscribeBatch(comp.id)}
+                              disabled={transcribingId === comp.id}
+                              className="text-[#666666] border border-[#444444] hover:border-[#0C2DF5] hover:text-[#0C2DF5] px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider transition-colors"
+                              title={`${untranscribed} videos sin transcripción`}
+                            >
+                              {transcribingId === comp.id ? "// ..." : `TRANSCRIBIR (${untranscribed})`}
+                            </button>
+                          ) : null;
+                        })()}
+                        {transcribeMsg?.id === comp.id && (
+                          <span className={`font-mono text-[9px] ${transcribeMsg.msg.includes("error") ? "text-[#FF2D20]" : "text-[#00CC66]"}`}>
+                            {transcribeMsg.msg}
+                          </span>
+                        )}
                         <button
                           onClick={() => deleteCompetitor.mutate({ id: comp.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListCompetitorsQueryKey() }) })}
                           className="text-[#666666] hover:text-[#FF2D20] transition-colors"

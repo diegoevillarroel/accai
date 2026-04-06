@@ -61,7 +61,7 @@ function Router() {
           <Route component={NotFound} />
         </Switch>
       </AppLayout>
-      <AccaiChat open={chatOpen} onClose={() => setChatOpen(false)} />
+      <AccaiChat open={chatOpen} onClose={() => setChatOpen(false)} onOpen={() => setChatOpen(true)} />
     </>
   );
 }

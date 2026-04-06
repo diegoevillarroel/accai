@@ -8,6 +8,7 @@ import accaiStreamRouter from "./accai-stream";
 import planRouter from "./plan";
 import instagramRouter from "./instagram";
 import threadsRouter from "./threads";
+import transcribeRouter from "./transcribe";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(accaiStreamRouter);
 router.use(planRouter);
 router.use(instagramRouter);
 router.use(threadsRouter);
+router.use(transcribeRouter);
 
 export default router;

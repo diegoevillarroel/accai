@@ -1,4 +1,5 @@
 import { useRoute, useLocation } from "wouter";
+import { useState } from "react";
 import { format } from "date-fns";
 import { useGetReel, useDeleteReel, getListReelsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,8 +12,32 @@ export function ReelDetail() {
   const queryClient = useQueryClient();
   const reelId = params?.id ? parseInt(params.id, 10) : 0;
 
-  const { data: reel, isLoading } = useGetReel(reelId);
+  const { data: reel, isLoading, refetch } = useGetReel(reelId);
   const deleteReel = useDeleteReel();
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcribeError, setTranscribeError] = useState<string | null>(null);
+
+  const handleTranscribe = async () => {
+    setTranscribing(true);
+    setTranscribeError(null);
+    try {
+      const r = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reelId }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        queryClient.invalidateQueries({ queryKey: getListReelsQueryKey() });
+        refetch();
+      } else {
+        setTranscribeError(d.error || "Error al transcribir");
+      }
+    } catch (e: any) {
+      setTranscribeError(e.message);
+    }
+    setTranscribing(false);
+  };
 
   const handleDelete = () => {
     if (confirm("¿Estás seguro de que deseas eliminar este reel?")) {
@@ -104,9 +129,21 @@ export function ReelDetail() {
 
       <div className="grid grid-cols-2 gap-8">
         <section>
-          <h2 className="text-[#0C2DF5] font-mono text-sm uppercase tracking-widest mb-4">// TRANSCRIPCION</h2>
-          <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6 text-[#F0F0F0] whitespace-pre-wrap font-sans text-sm min-h-[300px]">
-            {reel.transcripcion ? reel.transcripcion : <span className="text-[#666666] font-mono">// Sin transcripcion</span>}
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[#0C2DF5] font-mono text-sm uppercase tracking-widest">// TRANSCRIPCION</h2>
+            {!reel.transcripcion && (reel as any).permalink && (
+              <button
+                onClick={handleTranscribe}
+                disabled={transcribing}
+                className="text-[#666666] border border-[#666666] hover:border-[#0C2DF5] hover:text-[#0C2DF5] px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition-colors disabled:opacity-50"
+              >
+                {transcribing ? "// transcribiendo..." : "TRANSCRIBIR"}
+              </button>
+            )}
+          </div>
+          {transcribeError && <div className="text-[#FF2D20] font-mono text-xs mb-2">// {transcribeError}</div>}
+          <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6 text-[#F0F0F0] whitespace-pre-wrap font-mono text-[13px] min-h-[300px] leading-relaxed">
+            {reel.transcripcion ? reel.transcripcion : <span className="text-[#666666]">// Sin transcripcion — usa el botón TRANSCRIBIR para extraer via Apify</span>}
           </div>
         </section>
         <section>

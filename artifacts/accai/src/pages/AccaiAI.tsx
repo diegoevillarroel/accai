@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAccaiStream } from "@/lib/useAccaiStream";
 
-type Mode = "BRIEF" | "AUTOPSIA" | "ESTRATEGIA" | "COMPETENCIA" | "RESPONDER" | "CIERRE DM";
+type Mode = "BRIEF" | "AUTOPSIA" | "ESTRATEGIA" | "COMPETENCIA" | "RESPONDER" | "CIERRE DM" | "PATRONES";
 
 const MODES: { id: Mode; label: string; description: string }[] = [
   { id: "BRIEF", label: "BRIEF DE CONTENIDO", description: "Genera el próximo reel basado en tu historial" },
@@ -22,6 +22,7 @@ const MODES: { id: Mode; label: string; description: string }[] = [
   { id: "COMPETENCIA", label: "ANÁLISIS DE COMPETENCIA", description: "Detecta brechas estratégicas" },
   { id: "RESPONDER", label: "RESPONDER COMENTARIOS", description: "Redacta respuestas para comentarios sin responder" },
   { id: "CIERRE DM", label: "CIERRE DM", description: "Genera guion de cierre para conversaciones" },
+  { id: "PATRONES", label: "PATRONES LINGÜÍSTICOS", description: "Reverse-engineering de hooks y vocabulario viral desde transcripciones reales" },
 ];
 
 interface Comment {
@@ -167,7 +168,7 @@ export function AccaiAI() {
       )}
 
       {/* MODE SELECTOR */}
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-7 gap-2">
         {MODES.map(mode => (
           <button
             key={mode.id}
@@ -223,7 +224,23 @@ export function AccaiAI() {
             </div>
           )}
 
-          {selectedMode === "RESPONDER" ? (
+          {selectedMode === "PATRONES" ? (
+            <div className="space-y-4">
+              <div className="border border-[#0C2DF5]/20 bg-[#0C2DF5]/5 p-4 font-mono text-xs text-[#666666] leading-relaxed">
+                // Analizará transcripciones propias y de competidores contra métricas.<br />
+                // Requiere transcripciones cargadas (usa TRANSCRIBIR TODO en REELS).<br />
+                // Output: hooks virales, vocabulario de conversión, fórmula replicable.
+              </div>
+              <Button
+                onClick={handleRun}
+                disabled={accaiStream.isStreaming}
+                className="w-full bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest font-mono"
+                data-testid="button-run-accai"
+              >
+                {accaiStream.isStreaming ? "// analizando patrones..." : "ANALIZAR PATRONES"}
+              </Button>
+            </div>
+          ) : selectedMode === "RESPONDER" ? (
             <div className="space-y-3">
               {commentsLoading ? (
                 <div className="text-[#0C2DF5] font-mono text-xs">// cargando comentarios...</div>
