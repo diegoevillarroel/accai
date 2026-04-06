@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { BarChart3, Film, Eye, Cpu, Calendar } from "lucide-react";
-import { PasswordGate } from "./PasswordGate";
+import { PasswordGate } from "../PasswordGate";
 import { useEffect, useState } from "react";
 
 const navItems = [

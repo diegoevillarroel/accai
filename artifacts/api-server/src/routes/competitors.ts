@@ -9,6 +9,7 @@ import {
   CreateCompetitorReelBody,
   DeleteCompetitorReelParams,
 } from "@workspace/api-zod";
+import { serialize } from "../lib/serialize";
 
 const router: IRouter = Router();
 
@@ -17,7 +18,7 @@ router.get("/competitors", async (_req, res): Promise<void> => {
     .select()
     .from(competitorsTable)
     .orderBy(desc(competitorsTable.createdAt));
-  res.json(ListCompetitorsResponse.parse(competitors));
+  res.json(ListCompetitorsResponse.parse(serialize(competitors)));
 });
 
 router.post("/competitors", async (req, res): Promise<void> => {
@@ -27,14 +28,12 @@ router.post("/competitors", async (req, res): Promise<void> => {
     return;
   }
 
-  // Enforce max 8 competitors
   const existing = await db.select().from(competitorsTable);
   if (existing.length >= 8) {
     res.status(400).json({ error: "Maximum 8 competitors allowed" });
     return;
   }
 
-  // Prepend @ if missing
   const handle = parsed.data.handle.startsWith("@")
     ? parsed.data.handle
     : `@${parsed.data.handle}`;
@@ -44,7 +43,7 @@ router.post("/competitors", async (req, res): Promise<void> => {
     .values({ ...parsed.data, handle })
     .returning();
 
-  res.status(201).json(competitor);
+  res.status(201).json(serialize(competitor));
 });
 
 router.delete("/competitors/:id", async (req, res): Promise<void> => {
@@ -69,7 +68,7 @@ router.get("/competitor-reels", async (_req, res): Promise<void> => {
     .select()
     .from(competitorReelsTable)
     .orderBy(desc(competitorReelsTable.createdAt));
-  res.json(ListCompetitorReelsResponse.parse(reels));
+  res.json(ListCompetitorReelsResponse.parse(serialize(reels)));
 });
 
 router.post("/competitor-reels", async (req, res): Promise<void> => {
@@ -84,7 +83,7 @@ router.post("/competitor-reels", async (req, res): Promise<void> => {
     .values(parsed.data)
     .returning();
 
-  res.status(201).json(reel);
+  res.status(201).json(serialize(reel));
 });
 
 router.delete("/competitor-reels/:id", async (req, res): Promise<void> => {

@@ -5,6 +5,7 @@ import {
   ListAccaiSessionsResponse,
   CreateAccaiSessionBody,
 } from "@workspace/api-zod";
+import { serialize } from "../lib/serialize";
 
 const router: IRouter = Router();
 
@@ -13,7 +14,7 @@ router.get("/accai/sessions", async (_req, res): Promise<void> => {
     .select()
     .from(accaiSessionsTable)
     .orderBy(desc(accaiSessionsTable.createdAt));
-  res.json(ListAccaiSessionsResponse.parse(sessions));
+  res.json(ListAccaiSessionsResponse.parse(serialize(sessions)));
 });
 
 router.post("/accai/sessions", async (req, res): Promise<void> => {
@@ -28,7 +29,7 @@ router.post("/accai/sessions", async (req, res): Promise<void> => {
     .values(parsed.data)
     .returning();
 
-  res.status(201).json(session);
+  res.status(201).json(serialize(session));
 });
 
 export default router;

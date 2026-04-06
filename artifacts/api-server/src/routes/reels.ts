@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { desc, eq, avg, count, sql } from "drizzle-orm";
+import { desc, eq, avg, count } from "drizzle-orm";
 import { db, reelsTable } from "@workspace/db";
 import {
   ListReelsResponse,
@@ -9,6 +9,7 @@ import {
   GetReelResponse,
   DeleteReelParams,
 } from "@workspace/api-zod";
+import { serialize } from "../lib/serialize";
 
 const router: IRouter = Router();
 
@@ -31,7 +32,7 @@ router.get("/reels", async (_req, res): Promise<void> => {
     .select()
     .from(reelsTable)
     .orderBy(desc(reelsTable.fecha));
-  res.json(ListReelsResponse.parse(reels));
+  res.json(ListReelsResponse.parse(serialize(reels)));
 });
 
 router.post("/reels", async (req, res): Promise<void> => {
@@ -49,7 +50,6 @@ router.post("/reels", async (req, res): Promise<void> => {
   const sharesPct = views > 0 ? (shares / views) * 100 : 0;
   const savesPer1k = followersAtPublish > 0 ? (saves / followersAtPublish) * 1000 : 0;
 
-  // Get averages for firma classification
   const [stats] = await db
     .select({
       avgViews: avg(reelsTable.views),
@@ -79,7 +79,7 @@ router.post("/reels", async (req, res): Promise<void> => {
     })
     .returning();
 
-  res.status(201).json(GetReelResponse.parse(reel));
+  res.status(201).json(GetReelResponse.parse(serialize(reel)));
 });
 
 router.get("/reels/stats", async (_req, res): Promise<void> => {
@@ -136,7 +136,7 @@ router.get("/reels/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetReelResponse.parse(reel));
+  res.json(GetReelResponse.parse(serialize(reel)));
 });
 
 router.delete("/reels/:id", async (req, res): Promise<void> => {

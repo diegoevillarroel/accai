@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { desc, sql } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { db, accountSnapshotsTable, strategicDirectiveTable } from "@workspace/db";
 import {
   ListSnapshotsResponse,
@@ -9,6 +9,7 @@ import {
   SaveDirectiveBody,
   SaveDirectiveResponse,
 } from "@workspace/api-zod";
+import { serialize } from "../lib/serialize";
 
 const router: IRouter = Router();
 
@@ -17,7 +18,7 @@ router.get("/cuenta/snapshots", async (_req, res): Promise<void> => {
     .select()
     .from(accountSnapshotsTable)
     .orderBy(desc(accountSnapshotsTable.createdAt));
-  res.json(ListSnapshotsResponse.parse(snapshots));
+  res.json(ListSnapshotsResponse.parse(serialize(snapshots)));
 });
 
 router.post("/cuenta/snapshots", async (req, res): Promise<void> => {
@@ -35,7 +36,7 @@ router.post("/cuenta/snapshots", async (req, res): Promise<void> => {
     .values({ ...parsed.data, conversionPct })
     .returning();
 
-  res.status(201).json(GetLatestSnapshotResponse.parse(snapshot));
+  res.status(201).json(GetLatestSnapshotResponse.parse(serialize(snapshot)));
 });
 
 router.get("/cuenta/latest", async (_req, res): Promise<void> => {
@@ -50,7 +51,7 @@ router.get("/cuenta/latest", async (_req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetLatestSnapshotResponse.parse(snapshot));
+  res.json(GetLatestSnapshotResponse.parse(serialize(snapshot)));
 });
 
 router.get("/cuenta/directive", async (_req, res): Promise<void> => {
@@ -65,7 +66,7 @@ router.get("/cuenta/directive", async (_req, res): Promise<void> => {
     return;
   }
 
-  res.json(GetDirectiveResponse.parse(directive));
+  res.json(GetDirectiveResponse.parse(serialize(directive)));
 });
 
 router.post("/cuenta/directive", async (req, res): Promise<void> => {
@@ -75,14 +76,13 @@ router.post("/cuenta/directive", async (req, res): Promise<void> => {
     return;
   }
 
-  // Delete all old directives and insert new
   await db.delete(strategicDirectiveTable);
   const [directive] = await db
     .insert(strategicDirectiveTable)
     .values(parsed.data)
     .returning();
 
-  res.json(SaveDirectiveResponse.parse(directive));
+  res.json(SaveDirectiveResponse.parse(serialize(directive)));
 });
 
 export default router;

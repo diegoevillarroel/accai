@@ -9,12 +9,13 @@ import {
   UpsertPlanObjectiveBody,
   UpsertPlanObjectiveResponse,
 } from "@workspace/api-zod";
+import { serialize } from "../lib/serialize";
 
 const router: IRouter = Router();
 
 router.get("/plan/reels", async (_req, res): Promise<void> => {
   const reels = await db.select().from(planReelsTable);
-  res.json(ListPlanReelsResponse.parse(reels));
+  res.json(ListPlanReelsResponse.parse(serialize(reels)));
 });
 
 router.post("/plan/reels", async (req, res): Promise<void> => {
@@ -26,7 +27,6 @@ router.post("/plan/reels", async (req, res): Promise<void> => {
 
   const { mes, semana, slot } = parsed.data;
 
-  // Check if a slot already exists
   const [existing] = await db
     .select()
     .from(planReelsTable)
@@ -52,12 +52,12 @@ router.post("/plan/reels", async (req, res): Promise<void> => {
       .returning();
   }
 
-  res.json(UpsertPlanReelResponse.parse(result));
+  res.json(UpsertPlanReelResponse.parse(serialize(result)));
 });
 
 router.get("/plan/objectives", async (_req, res): Promise<void> => {
   const objectives = await db.select().from(planObjectivesTable);
-  res.json(ListPlanObjectivesResponse.parse(objectives));
+  res.json(ListPlanObjectivesResponse.parse(serialize(objectives)));
 });
 
 router.post("/plan/objectives", async (req, res): Promise<void> => {
@@ -88,7 +88,7 @@ router.post("/plan/objectives", async (req, res): Promise<void> => {
       .returning();
   }
 
-  res.json(UpsertPlanObjectiveResponse.parse(result));
+  res.json(UpsertPlanObjectiveResponse.parse(serialize(result)));
 });
 
 export default router;

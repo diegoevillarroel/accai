@@ -17,7 +17,7 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "claude-3-5-sonnet-20241022";
 
 async function buildContext(): Promise<string> {
   const [reels, latestSnapshot, directive, compReels, competitors] =
