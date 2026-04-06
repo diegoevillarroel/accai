@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_22"]
 
 [phases.install]
-cmds = ["npm i -g pnpm && pnpm install --no-frozen-lockfile"]
+cmds = ["npm install"]
 
 [phases.build]
-cmds = ["pnpm next build"]
+cmds = ["npm run build"]
 
 [start]
-cmd = "pnpm next start -p ${PORT:-3000}"
+cmd = "npm run start -- -p ${PORT:-3000}"
