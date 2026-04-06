@@ -38,7 +38,7 @@ export async function igFetch(endpoint: string, params: Record<string, string> =
 export async function getAllMedia() {
   let allMedia: any[] = [];
   const params: Record<string, string> = {
-    fields: 'id,caption,media_type,media_url,permalink,timestamp,like_count,comments_count',
+    fields: 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count',
     limit: '50'
   };
 
@@ -81,7 +81,7 @@ export async function getAccountInsights(period: string = 'day', since?: number,
 
 export async function getAccountProfile() {
   return igFetch(`/${getIgId()}`, {
-    fields: 'id,username,name,biography,followers_count,follows_count,media_count'
+    fields: 'id,username,name,biography,followers_count,follows_count,media_count,profile_picture_url'
   });
 }
 

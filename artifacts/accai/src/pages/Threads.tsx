@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { format, isThisWeek, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { Zap, ChevronDown, ChevronUp, Heart, MessageCircle, Repeat2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -213,93 +213,135 @@ export function Threads() {
         </div>
       </div>
 
-      {/* THREADS TABLE */}
-      <div className="border border-[#1A1A1A]">
-        <table className="w-full text-sm text-left">
-          <thead>
-            <tr className="border-b border-[#1A1A1A] text-[#666666] font-mono text-xs uppercase tracking-wider">
-              <th className="py-4 px-4 font-normal">Fecha</th>
-              <th className="py-4 px-4 font-normal">Texto</th>
-              <th className="py-4 px-4 font-normal">Likes</th>
-              <th className="py-4 px-4 font-normal">Replies</th>
-              <th className="py-4 px-4 font-normal">Reposts</th>
-              <th className="py-4 px-4 font-normal">Views</th>
-              <th className="py-4 px-4 font-normal">Eng%</th>
-              <th className="py-4 px-4 font-normal">Estado</th>
-              <th className="py-4 px-4 font-normal">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="font-mono">
-            {loading ? (
-              <tr><td colSpan={9} className="py-8 text-center text-[#0C2DF5]">// cargando...</td></tr>
-            ) : posts.length === 0 ? (
-              <tr><td colSpan={9} className="py-8 text-center text-[#666666]">// Sin posts. Sincroniza primero.</td></tr>
-            ) : (
-              posts.map((post, idx) => {
-                const isViral = (post.engagementRate || 0) > avgEngagement * 2;
-                const isConverting = convertingId === post.id;
-                return (
-                  <React.Fragment key={post.id}>
-                    <tr
-                      className={`${idx % 2 === 0 ? "bg-[#0D0D0D]" : "bg-[#111111]"} ${isViral ? "border-l-2 border-l-[#0C2DF5]" : ""}`}
-                    >
-                      <td className="py-3 px-4 border-b border-[#1A1A1A] whitespace-nowrap text-[#666666] text-xs">
+      {/* THREADS POST CARDS */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {loading ? (
+          <div className="loading-pulse py-8 text-center">// cargando posts...</div>
+        ) : posts.length === 0 ? (
+          <div style={{ color: "var(--text-muted)", fontFamily: "var(--font-display)", fontSize: "12px", textAlign: "center", padding: "40px 0" }}>
+            // Sin posts. Sincroniza primero.
+          </div>
+        ) : (
+          posts.map((post) => {
+            const isViral = (post.engagementRate || 0) > avgEngagement * 2;
+            const isConverting = convertingId === post.id;
+            return (
+              <React.Fragment key={post.id}>
+                <div
+                  style={{
+                    background: "var(--glass)",
+                    border: `1px solid ${isViral ? "var(--vc-accent)" : "var(--glass-border)"}`,
+                    borderLeft: isViral ? "2px solid var(--vc-accent)" : "1px solid var(--glass-border)",
+                    boxShadow: isViral ? "-4px 0 12px var(--accent-glow)" : "none",
+                    padding: "20px",
+                    transition: "border-color 200ms",
+                  }}
+                >
+                  {/* Top row */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{ fontFamily: "var(--font-display)", fontSize: "10px", color: "var(--text-muted)" }}>
                         {post.postedAt ? format(new Date(post.postedAt), "dd/MM/yy") : "-"}
-                      </td>
-                      <td className="py-3 px-4 border-b border-[#1A1A1A] max-w-[300px]">
-                        <span className="truncate block text-xs" title={post.textContent || ""}>
-                          {(post.textContent || "").substring(0, 80)}{(post.textContent || "").length > 80 ? "..." : ""}
+                      </span>
+                      {isViral && (
+                        <span className="vc-badge vc-badge-convertidor" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                          <Zap size={8} /> VIRAL
                         </span>
-                      </td>
-                      <td className="py-3 px-4 border-b border-[#1A1A1A] text-xs">{post.likes}</td>
-                      <td className="py-3 px-4 border-b border-[#1A1A1A] text-xs">{post.replies}</td>
-                      <td className="py-3 px-4 border-b border-[#1A1A1A] text-xs">{post.reposts}</td>
-                      <td className="py-3 px-4 border-b border-[#1A1A1A] text-xs">{post.views.toLocaleString()}</td>
-                      <td className={`py-3 px-4 border-b border-[#1A1A1A] text-xs font-bold ${isViral ? "text-[#0C2DF5]" : ""}`}>
-                        {(post.engagementRate || 0).toFixed(2)}%
-                      </td>
-                      <td className="py-3 px-4 border-b border-[#1A1A1A] text-xs">
-                        {post.promotedToReel && (
-                          <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider bg-[#00CC66]/20 text-[#00CC66]">ESCALADO</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 border-b border-[#1A1A1A]">
-                        <div className="flex items-center gap-2">
-                          {isViral && !post.promotedToReel && (
-                            <button
-                              onClick={() => handleConvertToReel(post)}
-                              disabled={isConverting}
-                              className="flex items-center gap-1 text-[#0C2DF5] hover:text-white border border-[#0C2DF5] px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider transition-colors"
-                              title="Convertir a Reel"
-                            >
-                              <Zap size={10} />
-                              {isConverting ? "..." : "REEL"}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => { setReplyModal({ postId: post.id, text: post.textContent || "" }); setReplyText(""); }}
-                            className="text-[#666666] hover:text-white border border-[#333333] px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider transition-colors"
-                          >
-                            REPLY
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    {/* Convert to reel inline result */}
-                    {convertResult?.id === post.id && (
-                      <tr key={`convert-${post.id}`} className="bg-[#080808]">
-                        <td colSpan={9} className="px-4 py-4 border-b border-[#0C2DF5]/30">
-                          <div className="font-mono text-xs text-[#666666] mb-2">// GUION DE REEL GENERADO</div>
-                          <pre className="font-mono text-sm text-[#F0F0F0] whitespace-pre-wrap leading-relaxed">{convertResult.text}</pre>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                      )}
+                      {post.promotedToReel && (
+                        <span className="vc-badge vc-badge-educativo">ESCALADO A REEL</span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      {isViral && !post.promotedToReel && (
+                        <button
+                          onClick={() => handleConvertToReel(post)}
+                          disabled={isConverting}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            color: "var(--vc-accent)",
+                            border: "1px solid var(--vc-accent)",
+                            padding: "4px 10px",
+                            fontSize: "10px",
+                            fontFamily: "var(--font-display)",
+                            background: "var(--accent-subtle)",
+                            cursor: isConverting ? "not-allowed" : "pointer",
+                            letterSpacing: "0.06em",
+                            borderRadius: "4px",
+                            transition: "background 150ms",
+                          }}
+                        >
+                          <Zap size={10} />
+                          {isConverting ? "..." : "REEL"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => { setReplyModal({ postId: post.id, text: post.textContent || "" }); setReplyText(""); }}
+                        style={{
+                          color: "var(--text-secondary)",
+                          border: "1px solid var(--glass-border)",
+                          padding: "4px 10px",
+                          fontSize: "10px",
+                          fontFamily: "var(--font-display)",
+                          background: "transparent",
+                          cursor: "pointer",
+                          letterSpacing: "0.06em",
+                          borderRadius: "4px",
+                          transition: "color 150ms, border-color 150ms",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.color = "white"; e.currentTarget.style.borderColor = "var(--glass-border-hover)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = "var(--text-secondary)"; e.currentTarget.style.borderColor = "var(--glass-border)"; }}
+                      >
+                        REPLY
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <p style={{
+                    color: "var(--text-primary)",
+                    fontSize: "14px",
+                    fontFamily: "var(--font-body)",
+                    lineHeight: 1.6,
+                    margin: "0 0 14px",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}>
+                    {post.textContent || ""}
+                  </p>
+
+                  {/* Stats row */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                    {[
+                      { icon: Heart, val: post.likes ?? 0 },
+                      { icon: MessageCircle, val: post.replies ?? 0 },
+                      { icon: Repeat2, val: post.reposts ?? 0 },
+                      { icon: Eye, val: post.views ?? 0 },
+                    ].map(({ icon: Icon, val }, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: "4px", color: "var(--text-muted)", fontSize: "11px", fontVariantNumeric: "tabular-nums" }}>
+                        <Icon size={11} />
+                        <span>{val.toLocaleString()}</span>
+                      </div>
+                    ))}
+                    <div style={{ marginLeft: "auto", fontFamily: "var(--font-display)", fontSize: "10px", color: isViral ? "var(--vc-accent)" : "var(--text-muted)" }}>
+                      {(post.engagementRate || 0).toFixed(2)}% eng
+                    </div>
+                  </div>
+                </div>
+
+                {/* Convert to reel inline result */}
+                {convertResult?.id === post.id && (
+                  <div key={`convert-${post.id}`} style={{ background: "var(--glass)", border: "1px solid rgba(12,45,245,0.3)", padding: "20px" }}>
+                    <div className="vc-section-title" style={{ marginBottom: "10px" }}>// GUION DE REEL GENERADO</div>
+                    <pre style={{ fontFamily: "var(--font-body)", fontSize: "13px", color: "var(--text-primary)", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{convertResult.text}</pre>
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })
+        )}
       </div>
 
       {/* Streaming indicator for convert */}

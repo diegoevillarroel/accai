@@ -68,6 +68,26 @@
 }
 
 :root {
+  /* ——— Liquid Glass Design System ——— */
+  --bg-base: #060608;
+  --bg-surface: rgba(255, 255, 255, 0.03);
+  --bg-surface-hover: rgba(255, 255, 255, 0.06);
+  --bg-elevated: rgba(255, 255, 255, 0.05);
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(255, 255, 255, 0.15);
+  --vc-accent: #0C2DF5;
+  --accent-glow: rgba(12, 45, 245, 0.15);
+  --accent-subtle: rgba(12, 45, 245, 0.08);
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.45);
+  --text-muted: rgba(255, 255, 255, 0.2);
+  --danger: #FF2D20;
+  --success: #00CC66;
+  --warning: #CC8800;
+  --font-display: 'Space Mono', monospace;
+  --font-body: 'Inter', -apple-system, sans-serif;
+
   --button-outline: rgba(0,0,0, .10);
   --badge-outline: rgba(0,0,0, .05);
 
@@ -76,7 +96,7 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 0 0% 3%; /* #080808 */
+  --background: 0 0% 2.4%; /* #060608 */
   --foreground: 0 0% 94%; /* #F0F0F0 */
   --border: 0 0% 10%; /* #1A1A1A */
   --card: 0 0% 3%;
@@ -194,7 +214,10 @@
     @apply border-border;
   }
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-mono;
@@ -208,4 +231,127 @@
     color: hsl(var(--muted-foreground));
     pointer-events: none;
   }
+}
+
+/* ——— Global Component Styles ——— */
+
+@keyframes vc-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+.loading-pulse {
+  animation: vc-pulse 1.5s ease-in-out infinite;
+  color: var(--vc-accent);
+  font-family: var(--font-display);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Glass cards */
+.vc-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 24px;
+  transition: border-color 200ms ease, background 200ms ease;
+}
+.vc-card:hover {
+  border-color: var(--glass-border-hover);
+  background: var(--bg-surface-hover);
+}
+
+/* Stat cards */
+.vc-stat-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  padding: 20px 24px;
+  border-left: 2px solid var(--vc-accent);
+  box-shadow: -4px 0 12px var(--accent-glow);
+  transition: border-color 200ms ease;
+}
+
+/* Section titles */
+.vc-section-title {
+  font-family: var(--font-display);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+/* Firma badges */
+.vc-badge {
+  padding: 4px 10px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  display: inline-block;
+}
+.vc-badge-convertidor {
+  background: var(--accent-subtle);
+  color: var(--vc-accent);
+  border: 1px solid rgba(12,45,245,0.3);
+}
+.vc-badge-viral {
+  background: rgba(204,136,0,0.1);
+  color: #CC8800;
+  border: 1px solid rgba(204,136,0,0.3);
+}
+.vc-badge-educativo {
+  background: rgba(0,204,102,0.1);
+  color: #00CC66;
+  border: 1px solid rgba(0,204,102,0.3);
+}
+.vc-badge-muerto {
+  background: rgba(255,255,255,0.03);
+  color: var(--text-muted);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Table styles */
+.vc-table thead th {
+  color: var(--text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: var(--font-body);
+  font-weight: 500;
+  border-bottom: 1px solid var(--glass-border);
+  padding: 8px 12px;
+}
+.vc-table tbody tr {
+  transition: background 100ms;
+}
+.vc-table tbody tr:nth-child(even) {
+  background: rgba(255,255,255,0.015);
+}
+.vc-table tbody tr:hover {
+  background: var(--bg-surface-hover);
+}
+.vc-table tbody td {
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 10px 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.2);
 }

@@ -38,6 +38,7 @@ export function Cuenta() {
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [timing, setTiming] = useState<TimingData | null>(null);
   const [timingLoading, setTimingLoading] = useState(false);
+  const [profile, setProfile] = useState<{ username?: string; followers_count?: number; media_count?: number; profile_picture_url?: string } | null>(null);
 
   useEffect(() => {
     if (directive) setDirectiveContent(directive.content);
@@ -50,6 +51,11 @@ export function Cuenta() {
       .then(d => setTiming(d))
       .catch(() => {})
       .finally(() => setTimingLoading(false));
+    // Fetch IG profile
+    fetch("/api/instagram/profile")
+      .then(r => r.json())
+      .then(d => { if (d.username) setProfile(d); })
+      .catch(() => {});
   }, []);
 
   const handleSyncIG = async () => {
@@ -116,90 +122,115 @@ export function Cuenta() {
         )}
       </div>
 
+      {/* PROFILE PREVIEW */}
+      {profile && (
+        <div className="vc-card" style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+          {profile.profile_picture_url ? (
+            <img
+              src={profile.profile_picture_url}
+              alt={profile.username}
+              style={{ width: 56, height: 56, borderRadius: "50%", border: "2px solid var(--glass-border)", objectFit: "cover" }}
+            />
+          ) : (
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--accent-subtle)", border: "2px solid var(--vc-accent)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontFamily: "var(--font-display)", fontSize: "18px", color: "var(--vc-accent)" }}>
+                {(profile.username || "V").charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
+          <div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: "16px", color: "var(--text-primary)" }}>@{profile.username}</div>
+            <div style={{ display: "flex", gap: "16px", marginTop: "6px" }}>
+              {[
+                { label: "Seguidores", val: (profile.followers_count || 0).toLocaleString() },
+                { label: "Medios", val: (profile.media_count || 0).toString() },
+              ].map(({ label, val }) => (
+                <div key={label} style={{ fontFamily: "var(--font-body)", fontSize: "12px", color: "var(--text-muted)" }}>
+                  <span style={{ color: "var(--text-primary)", fontWeight: 600 }}>{val}</span>{" "}{label}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* STAT CARDS */}
-      <div className="grid grid-cols-4 gap-6">
-        <div className="border border-[#1A1A1A] p-6">
-          <div className="text-[#666666] text-xs uppercase tracking-wider mb-2 font-mono" data-testid="text-stat-views-label">Views Totales</div>
-          <div className="text-3xl font-mono" data-testid="text-stat-views-value">
-            {isLoadingLatest ? <span className="text-[#0C2DF5] text-sm">// cargando...</span> : (latestSnapshot ? latestSnapshot.views.toLocaleString() : "-")}
+      <div className="grid grid-cols-4 gap-4">
+        {[
+          { label: "Views Totales", testId: "text-stat-views", val: latestSnapshot?.views.toLocaleString() ?? null, color: "var(--text-primary)" },
+          { label: "Seguidores Ganados", testId: "text-stat-followers", val: latestSnapshot ? `+${latestSnapshot.followersGained.toLocaleString()}` : null, color: "var(--success)" },
+          { label: "Visitas al Perfil", testId: "text-stat-visits", val: latestSnapshot?.profileVisits.toLocaleString() ?? null, color: "var(--text-primary)" },
+          { label: "Conversión", testId: "text-stat-conversion", val: latestSnapshot ? `${latestSnapshot.conversionPct.toFixed(1)}%` : null, color: "var(--vc-accent)" },
+        ].map(({ label, testId, val, color }) => (
+          <div key={testId} className="vc-stat-card">
+            <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--text-muted)", fontFamily: "var(--font-body)", marginBottom: "8px" }}
+              data-testid={`${testId}-label`}>{label}</div>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: "28px", fontWeight: 700, color, lineHeight: 1 }}
+              data-testid={`${testId}-value`}>
+              {isLoadingLatest ? <span className="loading-pulse">// ...</span> : (val ?? "—")}
+            </div>
           </div>
-        </div>
-        <div className="border border-[#1A1A1A] p-6">
-          <div className="text-[#666666] text-xs uppercase tracking-wider mb-2 font-mono" data-testid="text-stat-followers-label">Seguidores Ganados</div>
-          <div className="text-3xl font-mono text-[#00CC66]" data-testid="text-stat-followers-value">
-            {isLoadingLatest ? <span className="text-[#0C2DF5] text-sm">// cargando...</span> : (latestSnapshot ? `+${latestSnapshot.followersGained.toLocaleString()}` : "-")}
-          </div>
-        </div>
-        <div className="border border-[#1A1A1A] p-6">
-          <div className="text-[#666666] text-xs uppercase tracking-wider mb-2 font-mono" data-testid="text-stat-visits-label">Visitas al Perfil</div>
-          <div className="text-3xl font-mono" data-testid="text-stat-visits-value">
-            {isLoadingLatest ? <span className="text-[#0C2DF5] text-sm">// cargando...</span> : (latestSnapshot ? latestSnapshot.profileVisits.toLocaleString() : "-")}
-          </div>
-        </div>
-        <div className="border border-[#1A1A1A] p-6">
-          <div className="text-[#666666] text-xs uppercase tracking-wider mb-2 font-mono" data-testid="text-stat-conversion-label">Conversion</div>
-          <div className="text-3xl font-mono" data-testid="text-stat-conversion-value">
-            {isLoadingLatest ? <span className="text-[#0C2DF5] text-sm">// cargando...</span> : (latestSnapshot ? `${latestSnapshot.conversionPct.toFixed(1)}%` : "-")}
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* TIMING CHART */}
       <section>
-        <h2 className="text-[#0C2DF5] font-mono text-sm uppercase tracking-widest mb-6">// MEJOR HORA PARA PUBLICAR</h2>
+        <h2 className="vc-section-title" style={{ marginBottom: "20px" }}>// MEJOR HORA PARA PUBLICAR</h2>
         {timingLoading ? (
-          <div className="text-[#666666] font-mono text-xs">// cargando datos de audiencia...</div>
+          <div className="loading-pulse">// cargando datos de audiencia...</div>
         ) : timing && timing.hourly.length > 0 ? (
-          <div className="space-y-4">
-            {/* Bar chart */}
-            <div className="flex items-end gap-[2px] h-32 border-b border-[#1A1A1A] pb-2">
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* 24 vertical bars */}
+            <div style={{ display: "flex", alignItems: "flex-end", gap: "4px", height: "120px", paddingBottom: "4px" }}>
               {allHours.map(({ hour, avg }) => {
-                const heightPct = maxAvg > 0 ? (avg / maxAvg) * 100 : 0;
+                const heightPct = maxAvg > 0 ? (avg / maxAvg) * 100 : 2;
                 const isTop = top3Hours.has(hour);
                 return (
-                  <div key={hour} className="flex-1 flex flex-col items-center justify-end group relative" style={{ height: "100%" }}>
-                    <div
-                      style={{ height: `${heightPct}%` }}
-                      className={`w-full transition-all ${isTop ? "bg-[#0C2DF5]" : "bg-[#1A1A1A] group-hover:bg-[#333333]"}`}
-                    />
-                    {/* Tooltip on hover */}
-                    {avg > 0 && (
-                      <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-[#0D0D0D] border border-[#1A1A1A] px-2 py-1 text-[9px] font-mono text-[#F0F0F0] whitespace-nowrap opacity-0 group-hover:opacity-100 z-10 pointer-events-none">
-                        {Math.round(avg).toLocaleString()}
-                      </div>
-                    )}
-                  </div>
+                  <div
+                    key={hour}
+                    title={avg > 0 ? `${hour}h — ${Math.round(avg).toLocaleString()} online` : `${hour}h`}
+                    style={{
+                      flex: 1,
+                      height: `${Math.max(heightPct, 2)}%`,
+                      background: isTop ? "var(--vc-accent)" : "var(--glass-border)",
+                      boxShadow: isTop ? "0 0 8px var(--accent-glow)" : "none",
+                      transition: "background 150ms",
+                      cursor: "default",
+                      minWidth: 0,
+                    }}
+                    onMouseEnter={e => { if (!isTop) (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.15)"; }}
+                    onMouseLeave={e => { if (!isTop) (e.currentTarget as HTMLElement).style.background = "var(--glass-border)"; }}
+                  />
                 );
               })}
             </div>
 
-            {/* Hour labels (every 4 hours) */}
-            <div className="flex gap-[2px]">
+            {/* Hour labels */}
+            <div style={{ display: "flex", gap: "4px" }}>
               {allHours.map(({ hour }) => (
-                <div key={hour} className="flex-1 text-center">
-                  {hour % 4 === 0 && (
-                    <span className="text-[9px] font-mono text-[#444444]">{hour}h</span>
+                <div key={hour} style={{ flex: 1, textAlign: "center", minWidth: 0 }}>
+                  {hour % 6 === 0 && (
+                    <span style={{ fontSize: "8px", fontFamily: "var(--font-display)", color: "var(--text-muted)" }}>{hour}</span>
                   )}
                 </div>
               ))}
             </div>
 
             {/* Top 3 windows */}
-            <div className="flex gap-4 pt-2">
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
               {timing.recommendedWindows.slice(0, 3).map((w, i) => (
-                <div key={w.hour} className="border border-[#0C2DF5]/30 bg-[#0C2DF5]/5 px-4 py-2 flex items-center gap-3">
-                  <span className="text-[#0C2DF5] font-mono text-xs">🔵</span>
-                  <div>
-                    <div className="text-white font-mono text-xs font-bold">VENTANA ÓPTIMA #{i + 1}</div>
-                    <div className="text-[#0C2DF5] font-mono text-sm">{w.label}</div>
-                    <div className="text-[#666666] font-mono text-[10px]">~{Math.round(w.avgOnline).toLocaleString()} online</div>
+                <div key={w.hour} className="vc-card" style={{ flex: 1, minWidth: "160px", padding: "16px" }}>
+                  <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--text-muted)", fontFamily: "var(--font-display)", marginBottom: "6px" }}>
+                    VENTANA ÓPTIMA #{i + 1}
                   </div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: "18px", color: "var(--vc-accent)", marginBottom: "2px" }}>{w.label}</div>
+                  <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>~{Math.round(w.avgOnline).toLocaleString()} online</div>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <div className="text-[#666666] font-mono text-xs border border-[#1A1A1A] p-4">
+          <div className="vc-card" style={{ color: "var(--text-muted)", fontSize: "11px", fontFamily: "var(--font-display)" }}>
             // Sin datos de audiencia disponibles. Sincroniza primero.
           </div>
         )}

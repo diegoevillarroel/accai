@@ -36,6 +36,7 @@ export const reelsTable = pgTable("reels", {
   instagramMediaId: text("instagram_media_id").unique(),
   permalink: text("permalink"),
   caption: text("caption"),
+  thumbnailUrl: text("thumbnail_url"),
   watchTimeAvg: doublePrecision("watch_time_avg"),
   replays: integer("replays").default(0),
   completionRate: doublePrecision("completion_rate"),

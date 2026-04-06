@@ -7,6 +7,8 @@ import {
   strategicDirectiveTable,
   competitorReelsTable,
   competitorsTable,
+  threadsPostsTable,
+  commentCacheTable,
 } from "@workspace/db";
 import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "../lib/logger";
@@ -18,6 +20,52 @@ const anthropic = new Anthropic({
 });
 
 const MODEL = "claude-sonnet-4-20250514";
+
+async function buildChatContext(): Promise<string> {
+  const [reels, latestSnapshot, directive, threads, comments, sessions] =
+    await Promise.all([
+      db.select().from(reelsTable).orderBy(desc(reelsTable.fecha)).limit(10),
+      db.select().from(accountSnapshotsTable).orderBy(desc(accountSnapshotsTable.createdAt)).limit(1),
+      db.select().from(strategicDirectiveTable).orderBy(desc(strategicDirectiveTable.createdAt)).limit(1),
+      db.select().from(threadsPostsTable).orderBy(desc(threadsPostsTable.postedAt)).limit(5),
+      db.select().from(commentCacheTable).orderBy(desc(commentCacheTable.createdAt)).limit(50),
+      db.select().from(strategicDirectiveTable).orderBy(desc(strategicDirectiveTable.createdAt)).limit(1),
+    ]);
+
+  const firmaCount: Record<string, number> = {};
+  for (const r of reels) {
+    if (r.firma) firmaCount[r.firma] = (firmaCount[r.firma] ?? 0) + 1;
+  }
+  const total = reels.length || 1;
+  const funnelPct = {
+    CONVERTIDOR: Math.round(((firmaCount["CONVERTIDOR"] ?? 0) / total) * 100),
+    VIRAL: Math.round(((firmaCount["VIRAL"] ?? 0) / total) * 100),
+    EDUCATIVO: Math.round(((firmaCount["EDUCATIVO"] ?? 0) / total) * 100),
+    MUERTO: Math.round(((firmaCount["MUERTO"] ?? 0) / total) * 100),
+  };
+
+  const commentTexts = comments.map(c => c.text).filter(Boolean);
+  const topThemes = commentTexts.slice(0, 5).join(" | ") || "Sin comentarios";
+
+  return `[CONTEXTO CHAT — DATOS LIVE]
+
+ÚLTIMOS 10 REELS:
+${reels.map(r => `- ${r.fecha} | ${r.tema ?? "?"} | ${r.angulo ?? "?"} | Views:${r.views} | Saves:${r.savesPct.toFixed(1)}% | Firma:${r.firma}`).join("\n")}
+
+BALANCE DE FUNNEL (10 reels más recientes):
+${JSON.stringify(funnelPct)} — Objetivo: 40% Autoridad/35% Confianza/25% Conversión
+
+CUENTA (más reciente):
+${latestSnapshot[0] ? `Seguidores ganados: ${latestSnapshot[0].followersGained} | Visitas al perfil: ${latestSnapshot[0].profileVisits} | Conversión: ${latestSnapshot[0].conversionPct.toFixed(1)}%` : "Sin datos"}
+
+THREADS (últimos 5):
+${threads.map(t => `- ${t.postedAt ? new Date(t.postedAt).toLocaleDateString("es") : "?"} | Likes:${t.likes ?? 0} | Views:${t.views ?? 0} | Eng:${t.engagementRate ? t.engagementRate.toFixed(1) : "?"}%`).join("\n") || "Sin posts"}
+
+DIRECTIVA ACTIVA:
+${directive[0]?.content ?? "Sin directiva"}
+
+COMENTARIOS RECIENTES (temas): ${topThemes}`;
+}
 
 async function buildContext(): Promise<string> {
   const [reels, latestSnapshot, directive, compReels, competitors] =
@@ -116,6 +164,20 @@ Avatar B — El Operador Estancado: 25-45, factura $1k-10k/mes, problema de adqu
 
 REGLA DE OUTPUT: Máximo una página por respuesta. Diagnóstico frío. Sin padding. Sin bullet points decorativos. Directo al accionable.`;
 
+const CHAT_MODE_ADDITION = `
+
+Modo CHAT. Eres ACCAI en modo conversacional directo con Diego Villarroel.
+
+REGLAS ABSOLUTAS:
+1. Máximo 5 líneas por respuesta. Diego quiere velocidad, no ensayos. Si necesita profundidad, abrirá un modo específico.
+2. Tienes acceso al contexto completo inyectado: reels recientes con métricas, balance de funnel, comentarios frecuentes, directiva estratégica, posts de Threads con engagement. ÚSALO en cada respuesta.
+3. Si pregunta "qué grabo" o variante: da UN concepto exacto. Hook (qué dice en los primeros 3 segundos), qué muestra, estructura, CTA. UNA opción. La mejor según el balance de funnel y los datos.
+4. Si pega texto de DM o comentario: responde con el mensaje EXACTO que debe enviar. Listo para copiar. En su tono.
+5. Si pega una URL de reel o menciona un reel: analízalo contra el historial. Diagnóstico en 3 líneas.
+6. Tono: Diego Villarroel siempre. Dominante, preciso, sin coaching, sin suavización, sin hedging.
+7. Si la pregunta requiere análisis de más de 5 líneas: responde con diagnóstico corto + "Abre AUTOPSIA" o "Abre BRIEF" según corresponda.
+8. Nunca digas "no tengo suficiente data". Usa lo que hay y sé definitivo.`;
+
 const MODE_PROMPTS: Record<string, string> = {
   AUTOPSIA:
     "Modo AUTOPSIA. Analiza este reel específico contra el historial completo. Identifica exactamente qué combinación de variables (hook, ángulo, formato, tema, timing) produjo el resultado. Determina si es replicable y cómo, sin repetir el tema. Output: diagnóstico de por qué funcionó o falló + 2 conceptos derivados listos para ejecutar.",
@@ -132,11 +194,12 @@ const MODE_PROMPTS: Record<string, string> = {
 };
 
 router.post("/accai/stream", async (req, res): Promise<void> => {
-  const { mode, userInput, reelId, competitorIds } = req.body as {
+  const { mode, userInput, reelId, competitorIds, messages: historyMessages } = req.body as {
     mode: string;
     userInput?: string;
     reelId?: number;
     competitorIds?: number[];
+    messages?: Array<{ role: "user" | "assistant"; content: string }>;
   };
 
   if (!mode) {
@@ -150,6 +213,36 @@ router.post("/accai/stream", async (req, res): Promise<void> => {
   res.flushHeaders();
 
   try {
+    // CHAT mode — lightweight context, multi-turn conversation
+    if (mode === "CHAT") {
+      const chatContext = await buildChatContext();
+      const systemPrompt = `${MASTER_SYSTEM_PROMPT}${CHAT_MODE_ADDITION}\n\n${chatContext}`;
+
+      const msgs: Array<{ role: "user" | "assistant"; content: string }> =
+        historyMessages && historyMessages.length > 0
+          ? historyMessages
+          : [{ role: "user", content: userInput || "Hola" }];
+
+      const stream = await anthropic.messages.stream({
+        model: MODEL,
+        max_tokens: 512,
+        system: systemPrompt,
+        messages: msgs,
+      });
+
+      for await (const event of stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          res.write(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`);
+        }
+      }
+
+      const finalMessage = await stream.finalMessage();
+      res.write(`data: ${JSON.stringify({ tokensInput: finalMessage.usage.input_tokens, tokensOutput: finalMessage.usage.output_tokens })}\n\n`);
+      res.write("data: [DONE]\n\n");
+      res.end();
+      return;
+    }
+
     const context = await buildContext();
 
     // Build directive

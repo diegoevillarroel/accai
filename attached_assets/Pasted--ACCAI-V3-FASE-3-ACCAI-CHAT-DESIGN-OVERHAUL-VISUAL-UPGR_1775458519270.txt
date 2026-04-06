@@ -1,0 +1,288 @@
+# ACCAI V3 — FASE 3: ACCAI CHAT + DESIGN OVERHAUL + VISUAL UPGRADES
+# Execute after Phase 1 & 2 are verified. This is the final polish.
+
+---
+
+## PRIORITY 1 — ACCAI PERSISTENT CHAT
+
+This is the most important feature in the entire application. Build it first.
+
+### What it is
+A floating chat panel accessible from EVERY page. It is Diego's primary interface with ACCAI — he opens it, asks anything ("qué grabo hoy", "por qué falló este reel", "respóndele a este tipo"), and gets an exact answer with full context in under 5 seconds.
+
+### Floating trigger button
+Bottom-right corner, fixed position, z-50.
+- Circle 56px, NO border-radius exception — this ONE element can be rounded for ergonomics
+- Background: rgba(12, 45, 245, 0.9) with backdrop-blur-xl
+- White icon: MessageSquare from Lucide React, 24px
+- On hover: scale 1.05, transition 150ms
+- Keyboard shortcut: Ctrl+Shift+K (Cmd+Shift+K on Mac) toggles panel
+
+### Chat panel (slide-in from right)
+Width: 440px. Full viewport height. Fixed position. z-50.
+Background: rgba(8, 8, 8, 0.85) with backdrop-blur-2xl.
+Border-left: 1px solid rgba(255, 255, 255, 0.08).
+Animate in: translateX(100%) → translateX(0), 200ms ease-out.
+
+Layout:
+```
+┌─────────────────────────────────┐
+│ // ACCAI                    [×] │  ← header, 48px height
+│ sonnet-4 · $0.00               │  ← model + session cost
+├─────────────────────────────────┤
+│                                 │
+│  conversation messages          │  ← scrollable area, flex-1
+│  (auto-scroll to bottom)        │
+│                                 │
+├─────────────────────────────────┤
+│ [message input              ][→]│  ← input area, sticky bottom
+│ ↵ enter para enviar · esc cerrar│  ← hint text, 9px, muted
+└─────────────────────────────────┘
+```
+
+### Header
+- "// ACCAI" — font: Space Mono (Google Fonts import it), 14px, white, letter-spacing 0.05em
+- [×] close button — top right, 32px, rgba(255,255,255,0.3), hover → white
+- Below: "sonnet-4 · $0.00" in 10px, rgba(255,255,255,0.25)
+- Session cost updates after each response: input_tokens * 0.000003 + output_tokens * 0.000015
+
+### Messages area
+Scrollable div, flex-grow, overflow-y auto. Padding 16px.
+Custom minimal scrollbar: 4px width, rgba(255,255,255,0.1) thumb.
+
+Diego messages (right-aligned):
+- Background: rgba(12, 45, 245, 0.15)
+- Border: 1px solid rgba(12, 45, 245, 0.2)
+- Text: rgba(255,255,255,0.9), 13px, Inter
+- Max-width: 85%, padding 12px 16px, margin-bottom 12px
+
+ACCAI messages (left-aligned):
+- Background: rgba(255, 255, 255, 0.04)
+- Border: 1px solid rgba(255, 255, 255, 0.06)
+- Text: rgba(255,255,255,0.85), 13px, Inter
+- Max-width: 85%, padding 12px 16px, margin-bottom 12px
+- Streaming: text appears word by word as it streams from API
+
+### Input area
+Sticky bottom, padding 12px 16px, border-top 1px solid rgba(255,255,255,0.06).
+- Input field: flex-1, background rgba(255,255,255,0.04), border 1px solid rgba(255,255,255,0.08), padding 10px 14px, color white, 13px Inter, placeholder "Pregunta algo..." in rgba(255,255,255,0.2)
+- Send button: 40px square, background rgba(12, 45, 245, 0.8), white ArrowUp icon, hover → full opacity
+- Enter key sends message. Shift+Enter for newline.
+- Below input: "↵ enter · esc cerrar · ctrl+l limpiar" in 9px, rgba(255,255,255,0.15)
+
+### Chat API endpoint: POST /api/accai with mode "chat"
+
+System prompt for chat mode = MASTER SYSTEM PROMPT (same as other modes) + this addition:
+
+```
+Modo CHAT. Eres ACCAI en modo conversacional directo con Diego Villarroel.
+
+REGLAS ABSOLUTAS:
+1. Máximo 5 líneas por respuesta. Diego quiere velocidad, no ensayos. Si necesita profundidad, abrirá un modo específico.
+2. Tienes acceso al contexto completo inyectado: reels recientes con métricas, balance de funnel, comentarios frecuentes, directiva estratégica, posts de Threads con engagement. ÚSALO en cada respuesta.
+3. Si pregunta "qué grabo" o variante: da UN concepto exacto. Hook (qué dice en los primeros 3 segundos), qué muestra, estructura, CTA. UNA opción. La mejor según el balance de funnel y los datos.
+4. Si pega texto de DM o comentario: responde con el mensaje EXACTO que debe enviar. Listo para copiar. En su tono.
+5. Si pega una URL de reel o menciona un reel: analízalo contra el historial. Diagnóstico en 3 líneas.
+6. Tono: Diego Villarroel siempre. Dominante, preciso, sin coaching, sin suavización, sin hedging.
+7. Si la pregunta requiere análisis de más de 5 líneas: responde con diagnóstico corto + "Abre AUTOPSIA" o "Abre BRIEF" según corresponda.
+8. Nunca digas "no tengo suficiente data". Usa lo que hay y sé definitivo.
+```
+
+Context injection (lighter than full modes — keep chat fast):
+- Last 10 reels with key metrics (views, saves_pct, firma, angulo)
+- Latest account_snapshot (followers, conversion)
+- Strategic directive content
+- Top 5 recurring comment themes from comment_cache
+- Current funnel balance (% Autoridad/Confianza/Conversión)
+- Last 5 Threads posts with engagement_rate
+- Last ACCAI session summary (mode + date)
+
+### Chat state
+Conversation persists in React state during the session (clears on page refresh).
+Ctrl+L (Cmd+L) clears conversation.
+Chat panel stays open while navigating between modules.
+
+---
+
+## PRIORITY 2 — DESIGN SYSTEM OVERHAUL (Liquid Glass Premium)
+
+The current UI looks like a generic Next.js dashboard. It needs to match the villaclub.vip aesthetic: dark premium, liquid glass, subtle depth, motion, precision typography.
+
+### Global CSS variables — replace ALL existing theme variables:
+
+```css
+:root {
+  --bg-base: #060608;
+  --bg-surface: rgba(255, 255, 255, 0.03);
+  --bg-surface-hover: rgba(255, 255, 255, 0.06);
+  --bg-elevated: rgba(255, 255, 255, 0.05);
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-hover: rgba(255, 255, 255, 0.15);
+  --accent: #0C2DF5;
+  --accent-glow: rgba(12, 45, 245, 0.15);
+  --accent-subtle: rgba(12, 45, 245, 0.08);
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.45);
+  --text-muted: rgba(255, 255, 255, 0.2);
+  --danger: #FF2D20;
+  --success: #00CC66;
+  --warning: #CC8800;
+  --font-display: 'Space Mono', monospace;
+  --font-body: 'Inter', -apple-system, sans-serif;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+```
+
+### Card component (apply to ALL cards globally):
+```css
+.card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 24px;
+  transition: border-color 200ms ease, background 200ms ease;
+}
+.card:hover {
+  border-color: var(--glass-border-hover);
+  background: var(--bg-surface-hover);
+}
+```
+
+### Stat cards (CUENTA module, REELS intelligence, THREADS stats):
+- Large number: Space Mono, 32px, font-weight 700, white
+- Label above number: Inter, 9px, uppercase, letter-spacing 0.15em, var(--text-muted)
+- Subtle accent glow on the left edge: border-left 2px solid var(--accent) with box-shadow: -4px 0 12px var(--accent-glow)
+
+### Navigation sidebar:
+- Background: rgba(6, 6, 8, 0.95), backdrop-filter blur(40px)
+- Right border: 1px solid var(--glass-border)
+- Logo "ACCAI™": Space Mono, 18px, white
+- "// VILLACLUB": 10px, var(--accent), uppercase, letter-spacing 0.2em
+- Nav items: 13px, Inter, var(--text-secondary), padding 10px 20px
+- Active item: var(--text-primary) + left border 2px var(--accent) + background var(--accent-subtle)
+- Hover: background var(--bg-surface-hover), transition 150ms
+
+### Buttons:
+Primary: background var(--accent), color white, padding 10px 24px, font 12px Inter semibold, uppercase, letter-spacing 0.08em, border none. Hover: brightness 1.15.
+Outlined: background transparent, border 1px solid var(--accent), color var(--accent). Hover: background var(--accent-subtle).
+Ghost: background transparent, color var(--text-secondary), uppercase 10px. Hover: color var(--text-primary).
+ALL buttons: border-radius 6px (yes, slight rounding for premium feel — NOT zero), transition all 150ms.
+
+### Tables:
+- Header: var(--text-muted), 10px, uppercase, letter-spacing 0.1em, Inter, border-bottom 1px solid var(--glass-border)
+- Rows: alternate transparent and rgba(255,255,255,0.015)
+- Row hover: background var(--bg-surface-hover), transition 100ms
+- Text: var(--text-primary), 13px
+- Numbers: font-variant-numeric tabular-nums
+- Empty state: centered "—" or "Sin datos" in var(--text-muted)
+
+### Inputs:
+- Background: var(--glass)
+- Border: 1px solid var(--glass-border)
+- Focus: border-color var(--accent), box-shadow 0 0 0 1px var(--accent-glow)
+- Color: var(--text-primary), placeholder var(--text-muted)
+- Padding: 10px 14px, font 13px Inter
+- Border-radius: 6px
+- Transition: border-color 150ms, box-shadow 150ms
+
+### Section titles:
+ALL section titles must start with "//" and use Space Mono.
+Format: "// INTELIGENCIA DE RENDIMIENTO", "// INSTAGRAM SYNC", etc.
+Font: Space Mono, 11px, uppercase, letter-spacing 0.12em, var(--text-muted).
+
+### Mode tabs (ACCAI AI module):
+- Horizontal row, gap 0
+- Each tab: padding 10px 20px, 11px Inter semibold, uppercase, letter-spacing 0.06em
+- Inactive: var(--text-muted), transparent bg
+- Active: var(--text-primary), border-bottom 2px var(--accent)
+- Hover: var(--text-secondary)
+
+### Badges (firma, status, engagement):
+- CONVERTIDOR: background var(--accent-subtle), color var(--accent), border 1px solid rgba(12,45,245,0.3)
+- VIRAL: background rgba(204,136,0,0.1), color #CC8800, border 1px solid rgba(204,136,0,0.3)
+- EDUCATIVO: background rgba(0,204,102,0.1), color #00CC66, border 1px solid rgba(0,204,102,0.3)
+- MUERTO: background rgba(255,255,255,0.03), color var(--text-muted), border 1px solid rgba(255,255,255,0.05)
+- All badges: padding 4px 10px, 9px, uppercase, letter-spacing 0.08em, border-radius 4px
+
+---
+
+## PRIORITY 3 — VISUAL UPGRADES
+
+### Reel thumbnails
+Update the Instagram media fetch to include `thumbnail_url`:
+In /lib/instagram.ts getAllMedia(), add `thumbnail_url` to the fields string.
+Add column to reels DB table: `thumbnail_url TEXT`.
+Store thumbnail_url during sync.
+
+In the REELS table, add a 48x48 thumbnail preview as the FIRST column:
+- If thumbnail_url exists: show image, object-cover, border-radius 4px, border 1px solid var(--glass-border)
+- If no thumbnail: show Film icon from Lucide in var(--text-muted), 24px, centered in 48x48 box
+
+In the reel detail view (when clicking a row), show the thumbnail large (240px width) in the top-left corner.
+
+### Threads post cards
+In the THREADS module, instead of showing text truncated in a table, render each thread as a card:
+- Background: var(--glass)
+- Border: 1px solid var(--glass-border)
+- Padding: 20px
+- Top row: date + engagement badge
+- Content: full text, 14px Inter, var(--text-primary), line-height 1.6
+- Bottom row: likes + replies + reposts + views as small inline stats with Lucide icons (Heart, MessageCircle, Repeat2, Eye) in var(--text-muted), 11px
+- If engagement > 2x baseline: left border 2px var(--accent) + subtle glow
+
+### Better charts
+Replace the pure CSS bar chart in CUENTA (posting timing) with a cleaner implementation:
+- 24 vertical bars in a row, each representing an hour
+- Bar max-height: 120px, width: calc((100% - 23 * 4px) / 24) with 4px gap
+- Bar color: var(--glass-border) default, top 3 hours → var(--accent) with box-shadow 0 0 8px var(--accent-glow)
+- Below each bar: hour label (0, 1, 2... 23) in 8px var(--text-muted)
+- On hover: show tooltip with exact follower count
+
+### Account profile preview in CUENTA
+After syncing account, show at the very top of CUENTA:
+A card with: Instagram profile picture (from Graph API), username, followers count, following count, media count.
+Profile picture: 56px circle (this element can be rounded), border 2px solid var(--glass-border).
+
+### Loading states
+Replace all "// cargando..." text with a subtle pulse animation:
+```css
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+.loading-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+```
+Content: "// sincronizando" or "// procesando" or "// analizando" depending on context.
+
+### Password gate refinement
+- Center: "ACCAI™" in Space Mono, 48px, white
+- Below: "// VILLACLUB INTERNAL" in var(--accent), 10px, uppercase, letter-spacing 0.25em
+- Input: matches new design system (glass background, accent focus glow)
+- Button "ACCEDER": primary button style
+- Background: var(--bg-base) with a subtle radial gradient: radial-gradient(circle at 50% 50%, rgba(12,45,245,0.08) 0%, transparent 60%)
+- This creates a subtle blue ambient light behind the login. Premium feel.
+
+---
+
+## AFTER EVERYTHING — PUSH TO GITHUB
+
+1. git add .
+2. git commit -m "ACCAI v3.1 — persistent chat, liquid glass design system, visual upgrades"
+3. git push origin main
+
+Replace origin URL if needed.

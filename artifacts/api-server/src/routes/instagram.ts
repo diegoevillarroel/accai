@@ -108,6 +108,7 @@ router.post("/instagram/sync", async (_req, res): Promise<void> => {
               firma,
               permalink: media.permalink,
               caption: media.caption,
+              thumbnailUrl: media.thumbnail_url ?? existing.thumbnailUrl,
               syncedAt: new Date(),
             })
             .where(eq(reelsTable.id, existing.id));
@@ -144,6 +145,7 @@ router.post("/instagram/sync", async (_req, res): Promise<void> => {
             instagramMediaId: media.id,
             permalink: media.permalink,
             caption: media.caption,
+            thumbnailUrl: media.thumbnail_url ?? null,
             watchTimeAvg,
             replays,
             syncedAt: new Date(),
@@ -474,6 +476,15 @@ router.post("/instagram/comments/:id/mark-replied", async (req, res): Promise<vo
       .returning();
     if (!updated) { res.status(404).json({ error: "Comment not found" }); return; }
     res.json(serialize(updated));
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.get("/instagram/profile", async (_req, res): Promise<void> => {
+  try {
+    const profile = await getAccountProfile();
+    res.json(profile);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }

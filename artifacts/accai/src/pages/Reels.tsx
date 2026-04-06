@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2, ChevronDown, ChevronUp, Film } from "lucide-react";
 import { useAccaiStream } from "@/lib/useAccaiStream";
 
 const ANGULOS = ["Matemática innegable", "Proceso visible", "Contraste operador-amateur", "Asimetría de mercado"];
@@ -418,6 +418,7 @@ export function Reels() {
         <table className="w-full text-sm text-left">
           <thead>
             <tr className="border-b border-[#1A1A1A] text-[#666666] font-mono text-xs uppercase tracking-wider">
+              <th className="py-4 px-3 font-normal w-[56px]"></th>
               <th className="py-4 px-4 font-normal">Fecha</th>
               <th className="py-4 px-4 font-normal">Tema</th>
               <th className="py-4 px-4 font-normal">Angulo</th>
@@ -432,9 +433,9 @@ export function Reels() {
           </thead>
           <tbody className="font-mono">
             {isLoadingReels || isLoadingStats ? (
-              <tr><td colSpan={10} className="py-8 text-center text-[#0C2DF5]">// cargando...</td></tr>
+              <tr><td colSpan={11} className="py-8 text-center loading-pulse">// cargando...</td></tr>
             ) : reels.length === 0 ? (
-              <tr><td colSpan={10} className="py-8 text-center text-[#666666]">// Sin datos registrados</td></tr>
+              <tr><td colSpan={11} className="py-8 text-center text-[#666666]">// Sin datos registrados</td></tr>
             ) : (
               reels.map((reel, idx) => {
                 const isUnclassified = !reel.tema;
@@ -446,6 +447,19 @@ export function Reels() {
                       onClick={() => !isUnclassified && setLocation(`/reels/${reel.id}`)}
                       data-testid={`row-reel-${reel.id}`}
                     >
+                      <td className="py-2 px-3 border-b border-[#1A1A1A]">
+                        {(reel as any).thumbnailUrl ? (
+                          <img
+                            src={(reel as any).thumbnailUrl}
+                            alt=""
+                            style={{ width: 48, height: 48, objectFit: "cover", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.08)", display: "block" }}
+                          />
+                        ) : (
+                          <div style={{ width: 48, height: 48, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "4px" }}>
+                            <Film size={20} style={{ color: "rgba(255,255,255,0.2)" }} />
+                          </div>
+                        )}
+                      </td>
                       <td className="py-3 px-4 border-b border-[#1A1A1A] whitespace-nowrap text-xs">{format(new Date(reel.fecha), "dd/MM/yyyy")}</td>
                       <td className="py-3 px-4 border-b border-[#1A1A1A] max-w-[180px]">
                         {isUnclassified ? (
@@ -490,7 +504,7 @@ export function Reels() {
                     {/* Quick-classify inline form */}
                     {isExpanded && (
                       <tr key={`classify-${reel.id}`} className="bg-[#080808]">
-                        <td colSpan={10} className="px-4 py-4 border-b border-[#CC8800]/30">
+                        <td colSpan={11} className="px-4 py-4 border-b border-[#CC8800]/30">
                           <div className="flex items-end gap-3">
                             <div>
                               <label className="text-[#666666] text-[10px] mb-1 block font-mono uppercase">Tema</label>
