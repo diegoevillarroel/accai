@@ -64,12 +64,18 @@ export async function getMediaInsights(mediaId: string) {
 }
 
 export async function getAccountInsights(period: string = 'day', since?: number, until?: number) {
+  // Use day period — days_28 is incompatible with most metrics
+  // Fetch last 28 days worth of daily data using since/until
   const params: Record<string, string> = {
-    metric: 'reach,accounts_engaged,profile_views,follows_and_unfollows',
-    period
+    metric: 'reach,profile_views,follows_and_unfollows',
+    metric_type: 'total_value',
+    period: 'day'
   };
-  if (since) params.since = since.toString();
-  if (until) params.until = until.toString();
+  // Default: last 28 days
+  const untilTs = until ?? Math.floor(Date.now() / 1000);
+  const sinceTs = since ?? untilTs - 28 * 24 * 3600;
+  params.since = sinceTs.toString();
+  params.until = untilTs.toString();
   return igFetch(`/${getIgId()}/insights`, params);
 }
 

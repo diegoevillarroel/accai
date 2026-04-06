@@ -190,8 +190,17 @@ router.post("/instagram/sync-account", async (_req, res): Promise<void> => {
 
     const insightsMap: Record<string, number> = {};
     for (const item of (insightsRes.data || [])) {
-      const val = item.values?.[item.values.length - 1]?.value ?? 0;
-      insightsMap[item.name] = typeof val === 'object' ? Object.values(val as object).reduce((a: number, b: unknown) => a + (b as number), 0) : val;
+      // Sum all daily values for the 28-day period
+      let total = 0;
+      if (item.values && Array.isArray(item.values)) {
+        for (const v of item.values) {
+          const val = v.value ?? 0;
+          total += typeof val === 'number' ? val : 0;
+        }
+      } else if (item.total_value?.value !== undefined) {
+        total = item.total_value.value;
+      }
+      insightsMap[item.name] = total;
     }
 
     const followersGained = insightsMap['follows_and_unfollows'] ?? 0;
@@ -406,9 +415,22 @@ router.get("/instagram/timing", async (_req, res): Promise<void> => {
 
     const byHour: Record<number, number[]> = {};
     for (const entry of hourlyData) {
-      const hour = new Date(entry.end_time).getUTCHours();
-      if (!byHour[hour]) byHour[hour] = [];
-      byHour[hour].push(entry.value);
+      const val = typeof entry.value === 'object'
+        ? Object.values(entry.value as Record<string, number>)
+        : [entry.value];
+
+      if (typeof entry.value === 'object' && entry.value !== null) {
+        // hour-keyed object: { "0": 12, "1": 34, ... }
+        for (const [h, count] of Object.entries(entry.value as Record<string, number>)) {
+          const hour = parseInt(h);
+          if (!byHour[hour]) byHour[hour] = [];
+          byHour[hour].push(count as number);
+        }
+      } else {
+        const hour = new Date(entry.end_time).getUTCHours();
+        if (!byHour[hour]) byHour[hour] = [];
+        byHour[hour].push(entry.value ?? 0);
+      }
     }
 
     const avgByHour = Object.entries(byHour).map(([hour, vals]) => ({
@@ -418,11 +440,11 @@ router.get("/instagram/timing", async (_req, res): Promise<void> => {
 
     const topWindows = avgByHour.slice(0, 3).map(h => ({
       hour: h.hour,
-      label: `${h.hour}:00 - ${h.hour + 1}:00`,
+      label: `${h.hour.toString().padStart(2, '0')}:00 — ${(h.hour + 1).toString().padStart(2, '0')}:00`,
       avgOnline: Math.round(h.avg),
     }));
 
-    res.json({ hourly: avgByHour, recommendedWindows: topWindows });
+    res.json({ hourly: avgByHour, recommendedWindows: topWindows, raw: data });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
