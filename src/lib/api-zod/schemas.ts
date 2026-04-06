@@ -1,0 +1,289 @@
+import * as zod from "zod";
+
+export const HealthCheckResponse = zod.object({
+  status: zod.string(),
+});
+
+export const ListSnapshotsResponseItem = zod.object({
+  id: zod.number(),
+  periodStart: zod.string(),
+  periodEnd: zod.string(),
+  views: zod.number(),
+  followersGained: zod.number(),
+  profileVisits: zod.number(),
+  conversionPct: zod.number(),
+  createdAt: zod.string(),
+});
+export const ListSnapshotsResponse = zod.array(ListSnapshotsResponseItem);
+
+export const CreateSnapshotBody = zod.object({
+  periodStart: zod.string(),
+  periodEnd: zod.string(),
+  views: zod.number(),
+  followersGained: zod.number(),
+  profileVisits: zod.number(),
+});
+
+export const GetLatestSnapshotResponse = zod.object({
+  id: zod.number(),
+  periodStart: zod.string(),
+  periodEnd: zod.string(),
+  views: zod.number(),
+  followersGained: zod.number(),
+  profileVisits: zod.number(),
+  conversionPct: zod.number(),
+  createdAt: zod.string(),
+});
+
+export const GetDirectiveResponse = zod.object({
+  id: zod.number(),
+  content: zod.string(),
+  createdAt: zod.string(),
+});
+
+export const SaveDirectiveBody = zod.object({
+  content: zod.string(),
+});
+
+export const SaveDirectiveResponse = zod.object({
+  id: zod.number(),
+  content: zod.string(),
+  createdAt: zod.string(),
+});
+
+export const ListReelsResponseItem = zod.object({
+  id: zod.number(),
+  url: zod.string().nullish(),
+  igMediaId: zod.string().nullish(),
+  fecha: zod.string(),
+  tema: zod.string().nullish(),
+  angulo: zod.string().nullish(),
+  formato: zod.string().nullish(),
+  followersAtPublish: zod.number(),
+  views: zod.number(),
+  likes: zod.number(),
+  comments: zod.number(),
+  saves: zod.number(),
+  shares: zod.number(),
+  alcance: zod.number().nullish(),
+  likesPct: zod.number(),
+  commentsPct: zod.number(),
+  savesPct: zod.number(),
+  sharesPct: zod.number(),
+  savesPer1k: zod.number(),
+  watchTimeAvg: zod.number().nullish(),
+  replays: zod.number().nullish(),
+  transcripcion: zod.string().nullish(),
+  notas: zod.string().nullish(),
+  firma: zod.string(),
+  createdAt: zod.string(),
+});
+export const ListReelsResponse = zod.array(ListReelsResponseItem);
+
+export const CreateReelBody = zod.object({
+  url: zod.string().nullish(),
+  fecha: zod.string(),
+  tema: zod.string(),
+  angulo: zod.string(),
+  formato: zod.string(),
+  followersAtPublish: zod.number(),
+  views: zod.number(),
+  likes: zod.number(),
+  comments: zod.number(),
+  saves: zod.number(),
+  shares: zod.number(),
+  alcance: zod.number().nullish(),
+  transcripcion: zod.string().nullish(),
+  notas: zod.string().nullish(),
+});
+
+export const GetReelsStatsResponse = zod.object({
+  totalReels: zod.number(),
+  avgViews: zod.number(),
+  avgSavesPct: zod.number(),
+  avgLikesPct: zod.number(),
+  firmaBreakdown: zod.object({
+    CONVERTIDOR: zod.number(),
+    VIRAL: zod.number(),
+    EDUCATIVO: zod.number(),
+    MUERTO: zod.number(),
+  }),
+  anguloBreakdown: zod.object({
+    matematica: zod.number(),
+    proceso: zod.number(),
+    contraste: zod.number(),
+    asimetria: zod.number(),
+  }),
+});
+
+export const GetReelParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetReelResponse = zod.object({
+  id: zod.number(),
+  url: zod.string().nullish(),
+  igMediaId: zod.string().nullish(),
+  fecha: zod.string(),
+  tema: zod.string().nullish(),
+  angulo: zod.string().nullish(),
+  formato: zod.string().nullish(),
+  followersAtPublish: zod.number(),
+  views: zod.number(),
+  likes: zod.number(),
+  comments: zod.number(),
+  saves: zod.number(),
+  shares: zod.number(),
+  alcance: zod.number().nullish(),
+  likesPct: zod.number(),
+  commentsPct: zod.number(),
+  savesPct: zod.number(),
+  sharesPct: zod.number(),
+  savesPer1k: zod.number(),
+  watchTimeAvg: zod.number().nullish(),
+  replays: zod.number().nullish(),
+  transcripcion: zod.string().nullish(),
+  notas: zod.string().nullish(),
+  firma: zod.string(),
+  createdAt: zod.string(),
+});
+
+export const PatchReelBody = zod.object({
+  tema: zod.string().optional(),
+  angulo: zod.string().optional(),
+  formato: zod.string().optional(),
+  transcripcion: zod.string().optional(),
+  notas: zod.string().optional(),
+});
+
+export const DeleteReelParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListCompetitorsResponseItem = zod.object({
+  id: zod.number(),
+  handle: zod.string(),
+  nicho: zod.string(),
+  followersApprox: zod.number().nullish(),
+  notas: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const ListCompetitorsResponse = zod.array(ListCompetitorsResponseItem);
+
+export const CreateCompetitorBody = zod.object({
+  handle: zod.string(),
+  nicho: zod.string(),
+  followersApprox: zod.number().nullish(),
+  notas: zod.string().nullish(),
+});
+
+export const DeleteCompetitorParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListCompetitorReelsResponseItem = zod.object({
+  id: zod.number(),
+  competitorId: zod.number(),
+  url: zod.string().nullish(),
+  tema: zod.string(),
+  hook: zod.string(),
+  viewsApprox: zod.number().nullish(),
+  engagementLevel: zod.string(),
+  anguloDetectado: zod.string().nullish(),
+  transcripcion: zod.string().nullish(),
+  notas: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const ListCompetitorReelsResponse = zod.array(ListCompetitorReelsResponseItem);
+
+export const CreateCompetitorReelBody = zod.object({
+  competitorId: zod.number(),
+  url: zod.string().nullish(),
+  tema: zod.string(),
+  hook: zod.string(),
+  viewsApprox: zod.number().nullish(),
+  engagementLevel: zod.string(),
+  anguloDetectado: zod.string().nullish(),
+  transcripcion: zod.string().nullish(),
+  notas: zod.string().nullish(),
+});
+
+export const DeleteCompetitorReelParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ListAccaiSessionsResponseItem = zod.object({
+  id: zod.number(),
+  mode: zod.string(),
+  input: zod.string(),
+  response: zod.string(),
+  tokensInput: zod.number().nullish(),
+  tokensOutput: zod.number().nullish(),
+  costEstimate: zod.number().nullish(),
+  createdAt: zod.string(),
+});
+export const ListAccaiSessionsResponse = zod.array(ListAccaiSessionsResponseItem);
+
+export const CreateAccaiSessionBody = zod.object({
+  mode: zod.string(),
+  input: zod.string(),
+  response: zod.string(),
+  tokensInput: zod.number().nullish(),
+  tokensOutput: zod.number().nullish(),
+  costEstimate: zod.number().nullish(),
+});
+
+export const ListPlanReelsResponseItem = zod.object({
+  id: zod.number(),
+  mes: zod.number(),
+  semana: zod.number(),
+  slot: zod.number(),
+  reelId: zod.number().nullish(),
+  conceptoTema: zod.string().nullish(),
+  conceptoAngulo: zod.string().nullish(),
+  status: zod.string(),
+  createdAt: zod.string(),
+});
+export const ListPlanReelsResponse = zod.array(ListPlanReelsResponseItem);
+
+export const UpsertPlanReelBody = zod.object({
+  mes: zod.number(),
+  semana: zod.number(),
+  slot: zod.number(),
+  reelId: zod.number().nullish(),
+  conceptoTema: zod.string().nullish(),
+  conceptoAngulo: zod.string().nullish(),
+  status: zod.string(),
+});
+
+export const UpsertPlanReelResponse = zod.object({
+  id: zod.number(),
+  mes: zod.number(),
+  semana: zod.number(),
+  slot: zod.number(),
+  reelId: zod.number().nullish(),
+  conceptoTema: zod.string().nullish(),
+  conceptoAngulo: zod.string().nullish(),
+  status: zod.string(),
+  createdAt: zod.string(),
+});
+
+export const ListPlanObjectivesResponseItem = zod.object({
+  id: zod.number(),
+  mes: zod.number(),
+  objetivoText: zod.string(),
+  createdAt: zod.string(),
+});
+export const ListPlanObjectivesResponse = zod.array(ListPlanObjectivesResponseItem);
+
+export const UpsertPlanObjectiveBody = zod.object({
+  mes: zod.number(),
+  objetivoText: zod.string(),
+});
+
+export const UpsertPlanObjectiveResponse = zod.object({
+  id: zod.number(),
+  mes: zod.number(),
+  objetivoText: zod.string(),
+  createdAt: zod.string(),
+});
