@@ -154,18 +154,24 @@ export function AccaiAI() {
     <div className="space-y-8">
       {/* FUNNEL ALERT */}
       {funnelAlert && (
-        <div style={{ background: "rgba(12,45,245,0.06)", border: "1px solid rgba(12,45,245,0.2)", borderRadius: "8px", padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span className="font-mono text-xs" style={{ color: "var(--accent)" }}>{funnelAlert}</span>
-          <div className="flex items-center gap-3">
+        <div className="vc-alert-premium flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <span className="font-mono text-xs leading-relaxed text-[var(--vc-accent)]">{funnelAlert}</span>
+          <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => { setSelectedMode("CIERRE DM"); accaiStream.clear(); }}
-              style={{ color: "var(--accent)", border: "1px solid var(--accent)", background: "transparent", padding: "4px 12px", fontFamily: "var(--font-body)", fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer", transition: "background 150ms, color 150ms" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "var(--accent)"; e.currentTarget.style.color = "white"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--accent)"; }}
+              className="rounded-lg border border-[var(--vc-accent)]/50 bg-[var(--vc-accent)]/10 px-4 py-2 font-[family-name:var(--font-body)] text-[11px] font-semibold uppercase tracking-wider text-[var(--vc-accent)] transition hover:bg-[var(--vc-accent)] hover:text-white"
             >
-              IR A CIERRE DM
+              Ir a cierre DM
             </button>
-            <button onClick={() => setFunnelAlert(null)} style={{ color: "var(--text-muted)", background: "none", border: "none", cursor: "pointer", fontSize: "14px" }}>✕</button>
+            <button
+              type="button"
+              onClick={() => setFunnelAlert(null)}
+              className="rounded-lg p-2 text-lg leading-none text-white/35 transition hover:bg-white/5 hover:text-white"
+              aria-label="Cerrar aviso"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}
@@ -174,6 +180,7 @@ export function AccaiAI() {
       <div className="vc-mode-tabs">
         {MODES.map(mode => (
           <button
+            type="button"
             key={mode.id}
             onClick={() => { setSelectedMode(mode.id); accaiStream.clear(); }}
             className={`vc-mode-tab${selectedMode === mode.id ? " active" : ""}`}
@@ -188,19 +195,19 @@ export function AccaiAI() {
         <div className="col-span-1 space-y-4">
           <div>
             <div className="vc-section-title">// {currentMode?.label}</div>
-            <div style={{ color: "var(--text-muted)", fontFamily: "var(--font-body)", fontSize: "12px", lineHeight: 1.6, marginTop: "4px" }}>
+            <p className="mt-1 font-[family-name:var(--font-body)] text-[13px] leading-relaxed text-white/45">
               {currentMode?.description}
-            </div>
+            </p>
           </div>
 
           {selectedMode === "AUTOPSIA" && (
             <div>
-              <label className="text-[#666666] text-xs mb-2 block font-mono">SELECCIONA EL REEL</label>
+              <label className="mb-2 block font-mono text-xs text-white/40">Selecciona el reel</label>
               <Select value={selectedReelId?.toString() || ""} onValueChange={v => setSelectedReelId(Number(v))}>
-                <SelectTrigger className="bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus:ring-0 text-sm">
+                <SelectTrigger className="h-11 rounded-xl border border-white/10 bg-black/40 text-sm text-white focus:ring-2 focus:ring-[var(--accent-glow)]">
                   <SelectValue placeholder="Selecciona reel..." />
                 </SelectTrigger>
-                <SelectContent className="bg-[#0D0D0D] border-[#1A1A1A] rounded-none text-white max-h-48">
+                <SelectContent className="max-h-48 rounded-xl border border-white/10 bg-[#0c0e14] text-white shadow-2xl">
                   {reels.map(r => (
                     <SelectItem key={r.id} value={r.id.toString()}>
                       {format(new Date(r.fecha), "dd/MM/yy")} — {r.tema || "sin tema"} ({r.firma})
@@ -213,27 +220,28 @@ export function AccaiAI() {
 
           {selectedMode === "CIERRE DM" && (
             <div>
-              <label className="text-[#666666] text-xs mb-2 block font-mono">CONTEXTO DE LA CONVERSACION</label>
+              <label className="mb-2 block font-mono text-xs text-white/40">Contexto de la conversación</label>
               <Textarea
                 value={cierreContext}
                 onChange={e => setCierreContext(e.target.value)}
                 placeholder="Pega el historial de DM o describe el contexto del lead..."
-                className="bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5] text-white font-mono min-h-[100px] text-xs"
+                className="min-h-[100px] rounded-xl border border-white/10 bg-black/40 font-mono text-xs text-white placeholder:text-white/25 focus-visible:border-[var(--vc-accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent-glow)]"
               />
             </div>
           )}
 
           {selectedMode === "PATRONES" ? (
             <div className="space-y-4">
-              <div className="border border-[#0C2DF5]/20 bg-[#0C2DF5]/5 p-4 font-mono text-xs text-[#666666] leading-relaxed">
+              <div className="rounded-xl border border-[var(--vc-accent)]/20 bg-[var(--vc-accent)]/5 p-4 font-mono text-xs leading-relaxed text-white/50">
                 // Analizará transcripciones propias y de competidores contra métricas.<br />
                 // Requiere transcripciones cargadas (usa TRANSCRIBIR TODO en REELS).<br />
                 // Output: hooks virales, vocabulario de conversión, fórmula replicable.
               </div>
               <Button
+                type="button"
                 onClick={handleRun}
                 disabled={accaiStream.isStreaming}
-                className="w-full bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest font-mono"
+                className="h-11 w-full rounded-xl bg-gradient-to-r from-[#4d6cff] to-[#3d5cff] font-mono text-xs uppercase tracking-widest text-white shadow-lg shadow-indigo-500/20 hover:brightness-110"
                 data-testid="button-run-accai"
               >
                 {accaiStream.isStreaming ? "// analizando patrones..." : "ANALIZAR PATRONES"}
@@ -242,33 +250,33 @@ export function AccaiAI() {
           ) : selectedMode === "RESPONDER" ? (
             <div className="space-y-3">
               {commentsLoading ? (
-                <div className="text-[#0C2DF5] font-mono text-xs">// cargando comentarios...</div>
+                <div className="font-mono text-xs text-[var(--vc-accent)]">Cargando comentarios…</div>
               ) : unrepliedComments.length === 0 ? (
-                <div className="text-[#666666] font-mono text-xs border border-[#1A1A1A] p-4">
-                  // Sin comentarios pendientes.
+                <div className="rounded-xl border border-white/10 bg-black/20 p-4 font-mono text-xs text-white/40">
+                  Sin comentarios pendientes.
                 </div>
               ) : (
                 unrepliedComments.map(c => (
-                  <div key={c.id} className={`border p-3 space-y-2 transition-colors ${selectedComment?.id === c.id ? "border-[#0C2DF5]" : "border-[#1A1A1A]"}`}>
+                  <div key={c.id} className={`space-y-2 rounded-xl border p-3 transition-colors ${selectedComment?.id === c.id ? "border-[var(--vc-accent)]/60 bg-[var(--vc-accent)]/5" : "border-white/10 bg-black/20"}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
-                        <span className="text-[#0C2DF5] font-mono text-xs">@{c.username} </span>
-                        <span className="text-[#F0F0F0] font-mono text-xs">{c.text}</span>
+                        <span className="font-mono text-xs text-[var(--vc-accent)]">@{c.username} </span>
+                        <span className="font-mono text-xs text-white/85">{c.text}</span>
                       </div>
-                      {c.likeCount > 0 && <span className="text-[#666666] font-mono text-[10px]">{c.likeCount}♥</span>}
+                      {c.likeCount > 0 && <span className="font-mono text-[10px] text-white/35">{c.likeCount}♥</span>}
                     </div>
                     {draftedReplies[c.id] && (
-                      <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-2 font-mono text-xs text-[#F0F0F0]">
+                      <div className="rounded-lg border border-white/10 bg-black/40 p-2 font-mono text-xs text-white/90">
                         {draftedReplies[c.id]}
                       </div>
                     )}
-                    <div className="flex gap-2">
-                      <button onClick={() => handleDraftReply(c)} disabled={replyStream.isStreaming} className="text-[#0C2DF5] border border-[#0C2DF5] px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider hover:bg-[#0C2DF5] hover:text-white transition-colors">
-                        {replyStream.isStreaming && selectedComment?.id === c.id ? "..." : "REDACTAR"}
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => handleDraftReply(c)} disabled={replyStream.isStreaming} className="rounded-lg border border-[var(--vc-accent)] px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-[var(--vc-accent)] transition hover:bg-[var(--vc-accent)] hover:text-white disabled:opacity-50">
+                        {replyStream.isStreaming && selectedComment?.id === c.id ? "…" : "Redactar"}
                       </button>
                       {draftedReplies[c.id] && (
-                        <button onClick={() => handleMarkReplied(c.id)} disabled={markingReplied === c.id} className="text-[#00CC66] border border-[#00CC66] px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider hover:bg-[#00CC66] hover:text-black transition-colors">
-                          {markingReplied === c.id ? "..." : "✓ RESPONDIDO"}
+                        <button type="button" onClick={() => handleMarkReplied(c.id)} disabled={markingReplied === c.id} className="rounded-lg border border-emerald-500/50 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-emerald-400 transition hover:bg-emerald-500 hover:text-black disabled:opacity-50">
+                          {markingReplied === c.id ? "…" : "Marcar respondido"}
                         </button>
                       )}
                     </div>
@@ -286,12 +294,13 @@ export function AccaiAI() {
                   selectedMode === "AUTOPSIA" ? "¿Qué quieres entender de este reel?" :
                   "Escribe tu pregunta o contexto..."
                 }
-                className="w-full bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5] text-white font-mono min-h-[140px] text-sm"
+                className="min-h-[140px] w-full rounded-xl border border-white/10 bg-black/40 font-mono text-sm text-white placeholder:text-white/25 focus-visible:border-[var(--vc-accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent-glow)]"
               />
               <Button
+                type="button"
                 onClick={handleRun}
                 disabled={accaiStream.isStreaming || (selectedMode === "AUTOPSIA" && !selectedReelId)}
-                className="w-full bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest font-mono"
+                className="h-11 w-full rounded-xl bg-gradient-to-r from-[#4d6cff] to-[#3d5cff] font-mono text-xs uppercase tracking-widest text-white shadow-lg shadow-indigo-500/20 hover:brightness-110 disabled:opacity-50"
                 data-testid="button-run-accai"
               >
                 {accaiStream.isStreaming ? "// procesando..." : `EJECUTAR ${selectedMode}`}
@@ -300,11 +309,11 @@ export function AccaiAI() {
           )}
 
           {(accaiStream.tokensIn !== null || accaiStream.error) && (
-            <div className="font-mono text-[10px] text-[#444444] space-y-1">
+            <div className="space-y-1 font-mono text-[10px] text-white/30">
               {accaiStream.tokensIn !== null && (
-                <div>// tokens: {accaiStream.tokensIn?.toLocaleString()} in / {accaiStream.tokensOut?.toLocaleString()} out</div>
+                <div>Tokens: {accaiStream.tokensIn?.toLocaleString()} in · {accaiStream.tokensOut?.toLocaleString()} out</div>
               )}
-              {accaiStream.error && <div className="text-[#FF2D20]">// error en la generación</div>}
+              {accaiStream.error && <div className="text-[var(--danger)]">Error en la generación</div>}
             </div>
           )}
         </div>
@@ -314,18 +323,17 @@ export function AccaiAI() {
           <div className="vc-section-title">// RESPUESTA</div>
           <div
             ref={responseRef}
-            className="vc-card"
-            style={{ minHeight: "400px", maxHeight: "600px", overflowY: "auto", fontFamily: "var(--font-display)", fontSize: "13px", whiteSpace: "pre-wrap", lineHeight: 1.8, color: "var(--text-primary)", padding: "24px" }}
+            className="vc-preview-panel min-h-[400px] max-h-[min(600px,70vh)] overflow-y-auto p-6 font-mono text-[13px] leading-[1.85] text-white/90 [white-space:pre-wrap]"
             data-testid="div-accai-response"
           >
             {accaiStream.response ? (
               <>
                 {accaiStream.response}
-                {accaiStream.isStreaming && <span className="text-[#0C2DF5] animate-pulse ml-1">_</span>}
+                {accaiStream.isStreaming && <span className="ml-1 animate-pulse text-[var(--vc-accent)]">▍</span>}
               </>
             ) : (
-              <span className="text-[#333333]">
-                {accaiStream.isStreaming ? <span className="text-[#0C2DF5] animate-pulse">// generando...</span> : "// Selecciona un modo y ejecuta"}
+              <span className="text-white/20">
+                {accaiStream.isStreaming ? <span className="animate-pulse text-[var(--vc-accent)]">Generando…</span> : "Selecciona un modo y pulsa ejecutar. La respuesta aparecerá aquí."}
               </span>
             )}
           </div>
@@ -335,7 +343,7 @@ export function AccaiAI() {
       {/* SESSION HISTORY */}
       <section>
         <div className="vc-section-title" data-testid="title-sessions">// HISTORIAL DE SESIONES</div>
-        <div style={{ background: "var(--glass)", border: "1px solid var(--glass-border)", borderRadius: "8px", overflow: "hidden" }}>
+        <div className="overflow-hidden rounded-xl border border-white/10 bg-black/20 backdrop-blur-md">
           <table className="vc-table">
             <thead>
               <tr>

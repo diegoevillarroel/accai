@@ -6,6 +6,7 @@ import { PasswordGate } from "../PasswordGate";
 import { useEffect, useState } from "react";
 import { useListReels, useListCompetitors, useListAccaiSessions } from "@/lib/api-client-react";
 import { isToday, isThisWeek } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface TokenStatus {
   valid: boolean;
@@ -66,28 +67,28 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const getBadge = (route: string) => {
     if (route === "/reels" && unclassifiedCount > 0) {
       return (
-        <span style={{ marginLeft: "auto", fontSize: "9px", fontFamily: "var(--font-display)", padding: "2px 6px", background: "rgba(204,136,0,0.2)", color: "#CC8800", border: "1px solid rgba(204,136,0,0.3)", borderRadius: "3px", fontWeight: "bold" }}>
+        <span className="ml-auto rounded-md border border-amber-500/30 bg-amber-500/15 px-1.5 py-0.5 font-mono text-[9px] font-bold text-amber-400">
           {unclassifiedCount}
         </span>
       );
     }
     if (route === "/competidores" && competitors.length > 0) {
       return (
-        <span style={{ marginLeft: "auto", fontSize: "9px", fontFamily: "var(--font-display)", color: "var(--text-muted)" }}>
+        <span className="ml-auto font-mono text-[9px] text-white/35">
           {competitors.length}
         </span>
       );
     }
     if (route === "/threads" && threadsWeekCount !== null && threadsWeekCount > 0) {
       return (
-        <span style={{ marginLeft: "auto", fontSize: "9px", fontFamily: "var(--font-display)", padding: "2px 6px", background: "var(--accent-subtle)", color: "var(--vc-accent)", border: "1px solid rgba(12,45,245,0.3)", borderRadius: "3px" }}>
+        <span className="ml-auto rounded-md border border-[var(--vc-accent)]/35 bg-[var(--accent-subtle)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--vc-accent)]">
           {threadsWeekCount}
         </span>
       );
     }
     if (route === "/accai-ai" && sessionsToday > 0) {
       return (
-        <span style={{ marginLeft: "auto", fontSize: "9px", fontFamily: "var(--font-display)", color: "var(--text-muted)" }}>
+        <span className="ml-auto font-mono text-[9px] text-white/35">
           {sessionsToday}
         </span>
       );
@@ -97,25 +98,38 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isMobile) {
     return (
-      <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-base)", color: "var(--text-muted)", fontFamily: "var(--font-display)", textAlign: "center", padding: "16px", fontSize: "12px" }}>
-        // ACCAI requiere desktop
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--bg-base)] p-6 text-center">
+        <div className="vc-gate-card max-w-sm">
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--vc-accent)]">ACCAI</p>
+          <h2 className="mt-3 font-mono text-lg text-white">Vista de escritorio</h2>
+          <p className="mt-3 font-[family-name:var(--font-body)] text-sm leading-relaxed text-white/50">
+            Esta consola está optimizada para pantallas anchas. Abre ACCAI desde un ordenador o amplía la ventana del navegador.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
     <PasswordGate>
-      <div style={{ minHeight: "100vh", background: "var(--bg-base)", color: "var(--text-primary)", fontFamily: "var(--font-body)" }}>
-        {/* Sidebar */}
-        <aside style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: "240px", background: "rgba(6, 6, 8, 0.95)", backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)", borderRight: "1px solid var(--glass-border)", zIndex: 40, display: "flex", flexDirection: "column" }}>
-          {/* Logo */}
-          <div style={{ padding: "28px 24px 20px" }}>
-            <div style={{ fontFamily: "var(--font-display)", fontSize: "18px", color: "white", lineHeight: 1, letterSpacing: "0.02em" }}>ACCAI™</div>
-            <div style={{ color: "var(--vc-accent)", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.2em", marginTop: "4px", fontFamily: "var(--font-display)" }}>// VILLACLUB</div>
+      <div className="relative min-h-screen font-[family-name:var(--font-body)] text-[var(--text-primary)]">
+        <div className="vc-app-bg" aria-hidden />
+        <aside
+          className={cn(
+            "vc-sidebar fixed top-0 bottom-0 left-0 z-40 flex w-[264px] flex-col border-r border-white/[0.08]"
+          )}
+        >
+          <div className="border-b border-white/[0.06] px-6 pb-5 pt-8">
+            <div className="font-mono text-xl font-semibold tracking-tight text-white">ACCAI™</div>
+            <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--vc-accent)]">
+              VILLACLUB
+            </div>
+            <p className="mt-4 font-[family-name:var(--font-body)] text-[11px] leading-relaxed text-white/40">
+              Inteligencia operativa para tu contenido y conversión.
+            </p>
           </div>
 
-          {/* Nav */}
-          <nav style={{ flex: 1, display: "flex", flexDirection: "column", paddingTop: "8px" }}>
+          <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
             {NAV.map((item) => {
               const isActive = pathname === item.route || pathname?.startsWith(`${item.route}/`);
               const Icon = item.icon;
@@ -124,45 +138,53 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.route}
                   href={item.route}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "10px 20px",
-                    fontSize: "13px",
-                    fontFamily: "var(--font-body)",
-                    color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
-                    background: isActive ? "var(--accent-subtle)" : "transparent",
-                    borderLeft: `2px solid ${isActive ? "var(--vc-accent)" : "transparent"}`,
-                    transition: "background 150ms, color 150ms, border-color 150ms",
-                    textDecoration: "none",
-                    cursor: "pointer",
-                  }}
                   data-testid={`link-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                  className={cn(
+                    "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-white/[0.08] text-white shadow-[0_0_0_1px_rgba(77,108,255,0.35)]"
+                      : "text-white/45 hover:bg-white/[0.05] hover:text-white/85"
+                  )}
                 >
-                  <Icon size={15} />
-                  <span style={{ flex: 1 }}>{item.label}</span>
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors",
+                      isActive
+                        ? "bg-[var(--vc-accent)]/20 text-[var(--vc-accent)]"
+                        : "bg-white/[0.04] text-white/40 group-hover:text-white/70"
+                    )}
+                  >
+                    <Icon size={16} strokeWidth={2} />
+                  </span>
+                  <span className="flex-1 text-left">{item.label}</span>
                   {badge}
                 </Link>
               );
             })}
           </nav>
 
-          {/* Token status footer */}
-          <div style={{ padding: "20px 24px", borderTop: "1px solid var(--glass-border)" }}>
+          <div className="border-t border-white/[0.06] px-6 py-5">
             {tokenStatus ? (
-              <div style={{ fontFamily: "var(--font-display)", fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", color: tokenStatus.valid && (tokenStatus.daysRemaining ?? 999) >= 7 ? "var(--text-muted)" : "#FF2D20" }}>
-                {tokenStatus.valid ? `// ig: ${tokenStatus.daysRemaining}d` : `// ig: ${tokenStatus.error || "inválido"}`}
+              <div
+                className={cn(
+                  "font-mono text-[9px] uppercase tracking-[0.12em]",
+                  tokenStatus.valid && (tokenStatus.daysRemaining ?? 999) >= 7
+                    ? "text-white/35"
+                    : "text-[var(--danger)]"
+                )}
+              >
+                {tokenStatus.valid
+                  ? `Instagram · ${tokenStatus.daysRemaining ?? "—"} días`
+                  : `Instagram · ${tokenStatus.error || "token inválido"}`}
               </div>
             ) : (
-              <div className="loading-pulse">// ig: verificando</div>
+              <div className="loading-pulse">Verificando token…</div>
             )}
           </div>
         </aside>
 
-        {/* Main content */}
-        <main style={{ marginLeft: "240px", padding: "32px", minHeight: "100vh" }}>
-          {children}
+        <main className="relative z-10 min-h-screen pl-[264px]">
+          <div className="mx-auto max-w-[1600px] px-8 py-10 pb-16">{children}</div>
         </main>
       </div>
     </PasswordGate>

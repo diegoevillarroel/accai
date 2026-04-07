@@ -167,7 +167,7 @@ export function Plan90D() {
           })}
         </div>
         <div className="mt-4">
-          <Button onClick={handleSaveObjectives} disabled={savingObj} className="bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white uppercase tracking-widest font-mono text-xs h-9 px-6">
+          <Button onClick={handleSaveObjectives} disabled={savingObj} className="vc-btn-primary h-9 px-6">
             {savingObj ? "GUARDANDO..." : "GUARDAR OBJETIVOS"}
           </Button>
         </div>
@@ -180,10 +180,10 @@ export function Plan90D() {
           <div className="flex items-center gap-2">
             <span className="text-[#666666] font-mono text-xs">SEMANA</span>
             <Select value={String(selectedWeek)} onValueChange={v => setSelectedWeek(Number(v))}>
-              <SelectTrigger className="bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus:ring-0 w-24 h-8 text-sm">
+              <SelectTrigger className="vc-field h-8 w-24 text-sm focus:ring-0">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#0D0D0D] border-[#1A1A1A] rounded-none text-white">
+              <SelectContent className="rounded-xl border border-white/10 bg-[#0c0e14] text-white shadow-xl">
                 {WEEKS.map(w => <SelectItem key={w} value={String(w)}>W{w}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -215,7 +215,7 @@ export function Plan90D() {
                         className="bg-[#080808] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5] h-6 text-[10px] font-mono px-1"
                       />
                       <div className="flex gap-1">
-                        <button onClick={handleSaveReel} disabled={savingReel} className="flex-1 bg-[#0C2DF5] text-white font-mono text-[10px] py-1 uppercase hover:bg-[#0C2DF5]/80">OK</button>
+                        <button type="button" onClick={handleSaveReel} disabled={savingReel} className="vc-btn-primary flex-1 py-2 text-[10px]">OK</button>
                         <button onClick={() => setEditingReel(null)} className="flex-1 border border-[#333333] text-[#666666] font-mono text-[10px] py-1 uppercase hover:text-white">✕</button>
                       </div>
                     </div>
@@ -288,7 +288,7 @@ export function Plan90D() {
 
       {/* GENERATE PLAN */}
       <section className="space-y-4">
-        <Button onClick={handleGeneratePlan} disabled={planStream.isStreaming} className="bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest font-mono">
+        <Button type="button" onClick={handleGeneratePlan} disabled={planStream.isStreaming} className="vc-btn-primary h-10 px-8">
           {planStream.isStreaming ? "// generando..." : "GENERAR PLAN DE CONTENIDO CON ACCAI"}
         </Button>
 

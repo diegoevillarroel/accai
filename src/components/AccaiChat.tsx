@@ -156,27 +156,10 @@ export function AccaiChat({ open, onClose, onOpen }: AccaiChatProps) {
     <>
       {/* Floating trigger button */}
       <button
+        type="button"
         onClick={onOpen}
-        style={{
-          position: "fixed",
-          bottom: "28px",
-          right: "28px",
-          width: "56px",
-          height: "56px",
-          borderRadius: "50%",
-          background: "rgba(12, 45, 245, 0.9)",
-          backdropFilter: "blur(12px)",
-          WebkitBackdropFilter: "blur(12px)",
-          border: "none",
-          cursor: "pointer",
-          display: open ? "none" : "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 50,
-          transition: "transform 150ms ease",
-        }}
-        onMouseEnter={e => (e.currentTarget.style.transform = "scale(1.05)")}
-        onMouseLeave={e => (e.currentTarget.style.transform = "scale(1)")}
+        className="fixed bottom-7 right-7 z-50 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-[#4d6cff] to-[#2d4ae0] text-white shadow-[0_12px_40px_-8px_rgba(77,108,255,0.65)] transition hover:scale-105 hover:brightness-110 active:scale-[0.98]"
+        style={{ display: open ? "none" : "flex" }}
         title="ACCAI Chat (Ctrl+Shift+K)"
       >
         <MessageSquare size={24} color="white" />
@@ -184,22 +167,8 @@ export function AccaiChat({ open, onClose, onOpen }: AccaiChatProps) {
 
       {/* Chat panel */}
       <div
-        style={{
-          position: "fixed",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: "440px",
-          background: "rgba(8, 8, 8, 0.92)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          borderLeft: "1px solid rgba(255,255,255,0.08)",
-          zIndex: 50,
-          display: "flex",
-          flexDirection: "column",
-          transform: open ? "translateX(0)" : "translateX(100%)",
-          transition: "transform 200ms ease-out",
-        }}
+        className="fixed inset-y-0 right-0 z-50 flex w-[min(440px,100vw)] flex-col border-l border-white/10 bg-[#07080c]/95 shadow-[-24px_0_80px_-20px_rgba(0,0,0,0.8)] backdrop-blur-2xl transition-transform duration-200 ease-out"
+        style={{ transform: open ? "translateX(0)" : "translateX(100%)" }}
       >
         {/* Header */}
         <div style={{
@@ -229,21 +198,10 @@ export function AccaiChat({ open, onClose, onOpen }: AccaiChatProps) {
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            style={{
-              width: "32px",
-              height: "32px",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "rgba(255,255,255,0.3)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "color 150ms",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = "white")}
-            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-white/35 transition hover:bg-white/5 hover:text-white"
+            aria-label="Cerrar chat"
           >
             <X size={18} />
           </button>
@@ -348,23 +306,10 @@ export function AccaiChat({ open, onClose, onOpen }: AccaiChatProps) {
               disabled={streaming}
             />
             <button
+              type="button"
               onClick={send}
               disabled={streaming || !input.trim()}
-              style={{
-                width: "40px",
-                height: "40px",
-                background: streaming || !input.trim() ? "rgba(12,45,245,0.4)" : "rgba(12,45,245,0.8)",
-                border: "none",
-                borderRadius: "6px",
-                cursor: streaming || !input.trim() ? "not-allowed" : "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-                transition: "background 150ms",
-              }}
-              onMouseEnter={e => { if (!streaming && input.trim()) e.currentTarget.style.background = "#0C2DF5"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = streaming || !input.trim() ? "rgba(12,45,245,0.4)" : "rgba(12,45,245,0.8)"; }}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#4d6cff] to-[#2d4ae0] text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ArrowUp size={18} color="white" />
             </button>

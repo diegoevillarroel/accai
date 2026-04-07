@@ -135,12 +135,12 @@ export function Cuenta() {
         <Button
           onClick={handleSyncIG}
           disabled={syncingIG}
-          className="bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest font-mono text-xs h-9 px-6"
+          className="h-10 rounded-xl bg-gradient-to-r from-[#4d6cff] to-[#3d5cff] px-6 font-mono text-xs uppercase tracking-widest text-white shadow-lg shadow-indigo-500/15 hover:brightness-110"
         >
           {syncingIG ? "// sincronizando..." : "SINCRONIZAR CUENTA"}
         </Button>
         {lastSyncAt && (
-          <span className="text-[#666666] font-mono text-xs">
+          <span className="font-mono text-xs text-white/40">
             // última sincronización: {format(new Date(lastSyncAt), "dd/MM/yyyy HH:mm")}
           </span>
         )}
@@ -269,26 +269,26 @@ export function Cuenta() {
         <div className="vc-section-title" data-testid="title-update-period">// ACTUALIZAR PERIODO</div>
         <form onSubmit={handleSavePeriod} className="flex items-end gap-4">
           <div className="flex-1">
-            <label className="text-[#666666] text-xs mb-2 block font-mono">INICIO</label>
-            <Input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} required className="w-full bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5]" data-testid="input-period-start" />
+            <label className="mb-2 block font-mono text-xs text-white/40">Inicio</label>
+            <Input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} required className="h-10 w-full rounded-xl border border-white/10 bg-black/40 text-white focus-visible:border-[var(--vc-accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent-glow)]" data-testid="input-period-start" />
           </div>
           <div className="flex-1">
-            <label className="text-[#666666] text-xs mb-2 block font-mono">FIN</label>
-            <Input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} required className="w-full bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5]" data-testid="input-period-end" />
+            <label className="mb-2 block font-mono text-xs text-white/40">Fin</label>
+            <Input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} required className="h-10 w-full rounded-xl border border-white/10 bg-black/40 text-white focus-visible:border-[var(--vc-accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent-glow)]" data-testid="input-period-end" />
           </div>
           <div className="flex-1">
-            <label className="text-[#666666] text-xs mb-2 block font-mono">VIEWS</label>
-            <Input type="number" value={views} onChange={e => setViews(e.target.value)} required min="0" className="w-full bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5]" data-testid="input-views" />
+            <label className="mb-2 block font-mono text-xs text-white/40">Views</label>
+            <Input type="number" value={views} onChange={e => setViews(e.target.value)} required min="0" className="h-10 w-full rounded-xl border border-white/10 bg-black/40 text-white focus-visible:border-[var(--vc-accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent-glow)]" data-testid="input-views" />
           </div>
           <div className="flex-1">
-            <label className="text-[#666666] text-xs mb-2 block font-mono">SEGUIDORES</label>
-            <Input type="number" value={followersGained} onChange={e => setFollowersGained(e.target.value)} required min="0" className="w-full bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5]" data-testid="input-followers" />
+            <label className="mb-2 block font-mono text-xs text-white/40">Seguidores</label>
+            <Input type="number" value={followersGained} onChange={e => setFollowersGained(e.target.value)} required min="0" className="h-10 w-full rounded-xl border border-white/10 bg-black/40 text-white focus-visible:border-[var(--vc-accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent-glow)]" data-testid="input-followers" />
           </div>
           <div className="flex-1">
-            <label className="text-[#666666] text-xs mb-2 block font-mono">VISITAS</label>
-            <Input type="number" value={profileVisits} onChange={e => setProfileVisits(e.target.value)} required min="0" className="w-full bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5]" data-testid="input-visits" />
+            <label className="mb-2 block font-mono text-xs text-white/40">Visitas</label>
+            <Input type="number" value={profileVisits} onChange={e => setProfileVisits(e.target.value)} required min="0" className="h-10 w-full rounded-xl border border-white/10 bg-black/40 text-white focus-visible:border-[var(--vc-accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent-glow)]" data-testid="input-visits" />
           </div>
-          <Button type="submit" disabled={createSnapshot.isPending} className="bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest px-8 font-mono" data-testid="button-save-period">
+          <Button type="submit" disabled={createSnapshot.isPending} className="h-10 rounded-xl bg-gradient-to-r from-[#4d6cff] to-[#3d5cff] px-8 font-mono text-xs uppercase tracking-widest text-white shadow-lg shadow-indigo-500/15 hover:brightness-110" data-testid="button-save-period">
             {createSnapshot.isPending ? "GUARDANDO..." : "GUARDAR PERIODO"}
           </Button>
         </form>
@@ -337,13 +337,13 @@ export function Cuenta() {
             value={directiveContent}
             onChange={e => setDirectiveContent(e.target.value)}
             placeholder="Define el foco estrategico actual..."
-            className="w-full h-32 bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5] text-white resize-none font-mono"
+            className="h-32 w-full resize-none rounded-xl border border-white/10 bg-black/40 font-mono text-white placeholder:text-white/25 focus-visible:border-[var(--vc-accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent-glow)]"
             data-testid="textarea-directive"
           />
           <Button
             onClick={handleSaveDirective}
             disabled={saveDirective.isPending || isLoadingDirective}
-            className="bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest px-8 font-mono"
+            className="h-10 rounded-xl bg-gradient-to-r from-[#4d6cff] to-[#3d5cff] px-8 font-mono text-xs uppercase tracking-widest text-white shadow-lg shadow-indigo-500/15 hover:brightness-110"
             data-testid="button-save-directive"
           >
             {saveDirective.isPending ? "GUARDANDO..." : "GUARDAR DIRECTIVA"}

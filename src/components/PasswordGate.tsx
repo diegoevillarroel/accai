@@ -29,118 +29,67 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div style={{
-      position: "fixed",
-      inset: 0,
-      zIndex: 50,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      background: "var(--bg-base)",
-      backgroundImage: "radial-gradient(circle at 50% 50%, rgba(12,45,245,0.08) 0%, transparent 60%)",
-      color: "white",
-    }}>
-      {/* Logo */}
-      <div style={{ textAlign: "center", marginBottom: "40px" }}>
-        <h1
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "48px",
-            lineHeight: 1,
-            marginBottom: "10px",
-            color: "white",
-            letterSpacing: "-0.01em",
-          }}
-          data-testid="text-gate-title"
-        >
-          ACCAI™
-        </h1>
-        <div
-          style={{
-            color: "var(--vc-accent)",
-            fontSize: "10px",
-            textTransform: "uppercase",
-            letterSpacing: "0.25em",
-            fontFamily: "var(--font-display)",
-          }}
-          data-testid="text-gate-subtitle"
-        >
-          // VILLACLUB INTERNAL
-        </div>
-      </div>
-
-      {/* Form */}
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "12px", width: "300px" }}>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            setError(false);
-          }}
-          placeholder="Contraseña"
-          style={{
-            width: "100%",
-            height: "44px",
-            background: "var(--glass)",
-            border: `1px solid ${error ? "var(--danger)" : "var(--glass-border)"}`,
-            padding: "10px 14px",
-            color: "white",
-            fontSize: "13px",
-            fontFamily: "var(--font-body)",
-            outline: "none",
-            borderRadius: "6px",
-            transition: "border-color 150ms, box-shadow 150ms",
-          }}
-          onFocus={e => {
-            if (!error) {
-              e.currentTarget.style.borderColor = "var(--vc-accent)";
-              e.currentTarget.style.boxShadow = "0 0 0 1px var(--accent-glow)";
-            }
-          }}
-          onBlur={e => {
-            if (!error) {
-              e.currentTarget.style.borderColor = "var(--glass-border)";
-              e.currentTarget.style.boxShadow = "none";
-            }
-          }}
-          data-testid="input-gate-password"
-        />
-        <button
-          type="submit"
-          style={{
-            width: "100%",
-            height: "44px",
-            background: "var(--vc-accent)",
-            color: "white",
-            border: "none",
-            fontSize: "12px",
-            fontFamily: "var(--font-body)",
-            fontWeight: 600,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            cursor: "pointer",
-            borderRadius: "6px",
-            transition: "filter 150ms",
-          }}
-          onMouseEnter={e => (e.currentTarget.style.filter = "brightness(1.15)")}
-          onMouseLeave={e => (e.currentTarget.style.filter = "none")}
-          data-testid="button-gate-submit"
-        >
-          Acceder
-        </button>
-        {error && (
-          <div style={{
-            color: "var(--danger)",
-            fontSize: "11px",
-            fontFamily: "var(--font-display)",
-            textAlign: "center",
-          }}>
-            // contraseña incorrecta
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[var(--bg-base)] p-6">
+      <div className="vc-app-bg" aria-hidden />
+      <div className="relative z-10 w-full max-w-[400px]">
+        <div className="vc-gate-card">
+          <div className="mb-8 text-center">
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--vc-accent)]">Acceso privado</p>
+            <h1
+              className="mt-3 bg-gradient-to-br from-white to-white/70 bg-clip-text font-mono text-4xl font-semibold tracking-tight text-transparent"
+              data-testid="text-gate-title"
+            >
+              ACCAI™
+            </h1>
+            <p
+              className="mt-2 font-[family-name:var(--font-body)] text-sm text-white/45"
+              data-testid="text-gate-subtitle"
+            >
+              Consola interna VILLACLUB
+            </p>
           </div>
-        )}
-      </form>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+            <label className="sr-only" htmlFor="accai-gate-password">
+              Contraseña
+            </label>
+            <input
+              id="accai-gate-password"
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError(false);
+              }}
+              placeholder="Contraseña"
+              autoComplete="current-password"
+              className={cnInput(error)}
+              data-testid="input-gate-password"
+            />
+            <button
+              type="submit"
+              className="mt-1 h-12 w-full rounded-xl bg-gradient-to-r from-[#4d6cff] to-[#3d5cff] font-[family-name:var(--font-body)] text-sm font-semibold uppercase tracking-[0.1em] text-white shadow-[0_8px_32px_-8px_rgba(77,108,255,0.6)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vc-accent)] active:scale-[0.98]"
+              data-testid="button-gate-submit"
+            >
+              Entrar
+            </button>
+            {error && (
+              <p className="text-center font-mono text-xs text-[var(--danger)]" role="alert">
+                Contraseña incorrecta
+              </p>
+            )}
+          </form>
+        </div>
+        <p className="mt-8 text-center font-mono text-[10px] uppercase tracking-wide text-white/20">
+          Sesión en este dispositivo · no compartas acceso
+        </p>
+      </div>
     </div>
   );
+}
+
+function cnInput(error: boolean): string {
+  const base =
+    "h-12 w-full rounded-xl border bg-black/30 px-4 font-[family-name:var(--font-body)] text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[var(--vc-accent)] focus:ring-2 focus:ring-[var(--accent-glow)]";
+  return error ? `${base} border-[var(--danger)]` : `${base} border-white/[0.1]`;
 }
