@@ -42,7 +42,7 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
               ACCAI™
             </h1>
             <p
-              className="mt-2 font-[family-name:var(--font-body)] text-sm text-white/45"
+              className="mt-2 text-sm text-white/45"
               data-testid="text-gate-subtitle"
             >
               Consola interna VILLACLUB
@@ -68,7 +68,7 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
             />
             <button
               type="submit"
-              className="mt-1 h-12 w-full rounded-xl bg-gradient-to-r from-[#4d6cff] to-[#3d5cff] font-[family-name:var(--font-body)] text-sm font-semibold uppercase tracking-[0.1em] text-white shadow-[0_8px_32px_-8px_rgba(77,108,255,0.6)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vc-accent)] active:scale-[0.98]"
+              className="mt-1 h-12 w-full rounded-xl bg-gradient-to-r from-[#4d6cff] to-[#3d5cff] text-sm font-semibold uppercase tracking-[0.1em] text-white shadow-[0_8px_32px_-8px_rgba(77,108,255,0.6)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vc-accent)] active:scale-[0.98]"
               data-testid="button-gate-submit"
             >
               Entrar
@@ -90,6 +90,6 @@ export function PasswordGate({ children }: { children: React.ReactNode }) {
 
 function cnInput(error: boolean): string {
   const base =
-    "h-12 w-full rounded-xl border bg-black/30 px-4 font-[family-name:var(--font-body)] text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[var(--vc-accent)] focus:ring-2 focus:ring-[var(--accent-glow)]";
+    "h-12 w-full rounded-xl border bg-black/30 px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[var(--vc-accent)] focus:ring-2 focus:ring-[var(--accent-glow)]";
   return error ? `${base} border-[var(--danger)]` : `${base} border-white/[0.1]`;
 }

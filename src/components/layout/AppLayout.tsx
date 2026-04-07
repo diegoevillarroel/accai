@@ -102,7 +102,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="vc-gate-card max-w-sm">
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--vc-accent)]">ACCAI</p>
           <h2 className="mt-3 font-mono text-lg text-white">Vista de escritorio</h2>
-          <p className="mt-3 font-[family-name:var(--font-body)] text-sm leading-relaxed text-white/50">
+          <p className="mt-3 text-sm leading-relaxed text-white/50">
             Esta consola está optimizada para pantallas anchas. Abre ACCAI desde un ordenador o amplía la ventana del navegador.
           </p>
         </div>
@@ -112,7 +112,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <PasswordGate>
-      <div className="relative min-h-screen font-[family-name:var(--font-body)] text-[var(--text-primary)]">
+      <div className="relative isolate min-h-screen text-[var(--text-primary)]">
         <div className="vc-app-bg" aria-hidden />
         <aside
           className={cn(
@@ -124,7 +124,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--vc-accent)]">
               VILLACLUB
             </div>
-            <p className="mt-4 font-[family-name:var(--font-body)] text-[11px] leading-relaxed text-white/40">
+            <p className="mt-4 text-[11px] leading-relaxed text-white/40">
               Inteligencia operativa para tu contenido y conversión.
             </p>
           </div>
@@ -183,8 +183,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <main className="relative z-10 min-h-screen pl-[264px]">
-          <div className="mx-auto max-w-[1600px] px-8 py-10 pb-16">{children}</div>
+        <main className="relative z-[1] min-h-screen pl-[264px]">
+          <div className="relative z-[2] mx-auto max-w-[1600px] px-8 py-10 pb-16">{children}</div>
         </main>
       </div>
     </PasswordGate>

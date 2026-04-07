@@ -165,10 +165,16 @@ export function AccaiChat({ open, onClose, onOpen }: AccaiChatProps) {
         <MessageSquare size={24} color="white" />
       </button>
 
-      {/* Chat panel */}
+      {/* Chat panel — ancho fijo inline: evita que Tailwind falle con min() y ocupe todo el viewport */}
       <div
-        className="fixed inset-y-0 right-0 z-50 flex w-[min(440px,100vw)] flex-col border-l border-white/10 bg-[#07080c]/95 shadow-[-24px_0_80px_-20px_rgba(0,0,0,0.8)] backdrop-blur-2xl transition-transform duration-200 ease-out"
-        style={{ transform: open ? "translateX(0)" : "translateX(100%)" }}
+        className="accai-chat-panel fixed inset-y-0 right-0 z-50 flex flex-col border-l border-white/10 bg-[#07080c]/95 shadow-[-24px_0_80px_-20px_rgba(0,0,0,0.8)] backdrop-blur-2xl transition-transform duration-200 ease-out"
+        style={{
+          width: "min(440px, 100vw)",
+          maxWidth: "100vw",
+          transform: open ? "translateX(0)" : "translateX(100%)",
+          pointerEvents: open ? "auto" : "none",
+        }}
+        aria-hidden={!open}
       >
         {/* Header */}
         <div style={{

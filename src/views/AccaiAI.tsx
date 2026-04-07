@@ -160,7 +160,7 @@ export function AccaiAI() {
             <button
               type="button"
               onClick={() => { setSelectedMode("CIERRE DM"); accaiStream.clear(); }}
-              className="rounded-lg border border-[var(--vc-accent)]/50 bg-[var(--vc-accent)]/10 px-4 py-2 font-[family-name:var(--font-body)] text-[11px] font-semibold uppercase tracking-wider text-[var(--vc-accent)] transition hover:bg-[var(--vc-accent)] hover:text-white"
+              className="rounded-lg border border-[var(--vc-accent)]/50 bg-[var(--vc-accent)]/10 px-4 py-2 font-sans text-[11px] font-semibold uppercase tracking-wider text-[var(--vc-accent)] transition hover:bg-[var(--vc-accent)] hover:text-white"
             >
               Ir a cierre DM
             </button>
@@ -195,7 +195,7 @@ export function AccaiAI() {
         <div className="col-span-1 space-y-4">
           <div>
             <div className="vc-section-title">// {currentMode?.label}</div>
-            <p className="mt-1 font-[family-name:var(--font-body)] text-[13px] leading-relaxed text-white/45">
+            <p className="mt-1 font-sans text-[13px] leading-relaxed text-white/45">
               {currentMode?.description}
             </p>
           </div>
