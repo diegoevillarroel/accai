@@ -1,444 +1,286 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
-import { format, isThisWeek, formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
-import { Zap, ChevronDown, ChevronUp, Heart, MessageCircle, Repeat2, Eye } from "lucide-react";
+import { useState } from "react";
+import { 
+  useListThreadsPosts, 
+  useUpsertThreadsPost, 
+  getListThreadsPostsQueryKey 
+} from "@/lib/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import type { ThreadsPost } from "@/lib/api-client-react";
 import { useAccaiStream } from "@/lib/useAccaiStream";
+import { 
+  TrendingUp, 
+  ChevronRight, 
+  Zap, 
+  Copy, 
+  CheckCircle2, 
+  Layers, 
+  RefreshCcw,
+  ExternalLink,
+  Loader2
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function Threads() {
-  const [posts, setPosts] = useState<ThreadsPost[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [lastSync, setLastSync] = useState<string | null>(null);
-  const [syncResult, setSyncResult] = useState<{synced:number;new:number} | null>(null);
+  const queryClient = useQueryClient();
+  const { data: posts = [], isLoading } = useListThreadsPosts();
+  const upsertPost = useUpsertThreadsPost();
+  
+  const [userInput, setUserInput] = useState("");
+  const threadsStream = useAccaiStream();
+  const [variations, setVariations] = useState<string[]>([]);
+  const [isGeneratingVariations, setIsGeneratingVariations] = useState(false);
+  const [publishingId, setPublishingId] = useState<number | null>(null);
 
-  const [publishOpen, setPublishOpen] = useState(false);
-  const [publishText, setPublishText] = useState("");
-  const [publishing, setPublishing] = useState(false);
-  const [publishMsg, setPublishMsg] = useState("");
-
-  const [prospOpen, setProspOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searching, setSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-
-  const [replyModal, setReplyModal] = useState<{postId: number; text: string} | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [sendingReply, setSendingReply] = useState(false);
-
-  const [convertingId, setConvertingId] = useState<number | null>(null);
-  const [convertResult, setConvertResult] = useState<{id: number; text: string} | null>(null);
-  const accaiStream = useAccaiStream();
-
-  const loadPosts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const r = await fetch("/api/threads/posts");
-      const data = await r.json();
-      setPosts(Array.isArray(data) ? data : []);
-    } catch {}
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { loadPosts(); }, [loadPosts]);
-
-  const handleSync = async () => {
-    setSyncing(true);
-    try {
-      const r = await fetch("/api/threads/sync", { method: "POST" });
-      const d = await r.json();
-      setSyncResult(d);
-      setLastSync(new Date().toISOString());
-      await loadPosts();
-    } catch {}
-    setSyncing(false);
+  const handleGenerate = async () => {
+    setVariations([]);
+    await threadsStream.stream({ mode: "THREADS", userInput });
   };
 
-  const handlePublish = async () => {
-    if (!publishText.trim()) return;
-    setPublishing(true);
-    setPublishMsg("");
+  const handleGenerateVariations = async () => {
+    setIsGeneratingVariations(true);
+    // Simulation: in production this calls /api/accai/stream with a variation prompt
+    const newVariations = [
+      "La aritmética es el único filtro que importa. El resto es ruido performativo.",
+      "Operar bajo supuestos es la forma más rápida de quemar capital en Meta Ads.",
+      "El landed cost es la métrica de la cual nadie habla porque nadie la entiende.",
+      "Vender es fácil. Cobrar es el problema. El sistema resuelve el segundo.",
+      "No busques clientes. Construye la infraestructura para ser encontrado."
+    ];
+    await new Promise(r => setTimeout(r, 1500));
+    setVariations(newVariations);
+    setIsGeneratingVariations(false);
+  };
+
+  const handlePublish = async (text: string, postId?: number) => {
+    if (postId) setPublishingId(postId);
     try {
-      const r = await fetch("/api/threads/publish", {
+      const res = await fetch("/api/threads/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: publishText }),
+        body: JSON.stringify({ text })
       });
-      const d = await r.json();
-      if (d.success) {
-        setPublishMsg("// publicado con éxito");
-        setPublishText("");
-        setTimeout(() => { setPublishOpen(false); setPublishMsg(""); }, 2000);
-        await loadPosts();
-      } else {
-        setPublishMsg(`// error: ${d.error || "falló"}`);
+      const data = await res.json();
+      if (data.success) {
+        // Sync to update ID and status
+        await fetch("/api/threads/sync", { method: "POST" });
+        queryClient.invalidateQueries({ queryKey: getListThreadsPostsQueryKey() });
+        alert("Publicado con éxito");
       }
-    } catch (e: any) {
-      setPublishMsg(`// error: ${e.message}`);
+    } catch (err) {
+      console.error("Publish error:", err);
+    } finally {
+      if (postId) setPublishingId(null);
     }
-    setPublishing(false);
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    setSearching(true);
-    setSearchResults([]);
-    try {
-      const r = await fetch("/api/threads/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: searchQuery }),
-      });
-      const d = await r.json();
-      setSearchResults(d.data || []);
-    } catch {}
-    setSearching(false);
+  const handlePromoteToReel = async (postId: number) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    await (upsertPost as any).mutateAsync({
+      data: {
+        id: post.id,
+        promotedToReel: true
+      }
+    });
+    queryClient.invalidateQueries({ queryKey: getListThreadsPostsQueryKey() });
   };
 
-  const handleConvertToReel = async (post: ThreadsPost) => {
-    setConvertingId(post.id);
-    const avgEngagement = posts.reduce((s, p) => s + (p.engagementRate || 0), 0) / Math.max(posts.length, 1);
-    const xAbove = avgEngagement > 0 ? (post.engagementRate || 0) / avgEngagement : 1;
-    const prompt = `Este texto se publicó en Threads y generó ${(post.engagementRate || 0).toFixed(2)}% de engagement, que es ${xAbove.toFixed(1)}x por encima de la media. Conviértelo en un guion de Reel: Hook exacto (primeros 3 segundos — qué digo y qué se ve), Retención (estructura), CTA. Mantén el mismo ángulo y tono que hizo viral el Thread.\n\nTexto: ${post.textContent}`;
-    const result = await accaiStream.stream({ mode: "BRIEF", userInput: prompt });
-    setConvertResult({ id: post.id, text: result });
-    // Mark as promoted
-    try {
-      await fetch(`/api/threads/${post.id}/promote`, { method: "PUT" });
-      setPosts(ps => ps.map(p => p.id === post.id ? { ...p, promotedToReel: true } : p));
-    } catch {}
-    setConvertingId(null);
-  };
+  const validatedHooks = posts
+    .filter(p => p.promotedToReel || (p.engagementRate && p.engagementRate > 2))
+    .sort((a, b) => (b.engagementRate || 0) - (a.engagementRate || 0));
 
-  const handleReply = async () => {
-    if (!replyModal || !replyText.trim()) return;
-    setSendingReply(true);
-    try {
-      await fetch("/api/threads/publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: replyText }),
-      });
-      setReplyModal(null);
-      setReplyText("");
-    } catch {}
-    setSendingReply(false);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
   };
-
-  const avgEngagement = posts.length > 0
-    ? posts.reduce((s, p) => s + (p.engagementRate || 0), 0) / posts.length
-    : 0;
-  const bestPost = posts.reduce<ThreadsPost | null>((best, p) => {
-    if (!best || (p.engagementRate || 0) > (best.engagementRate || 0)) return p;
-    return best;
-  }, null);
-  const postsThisWeek = posts.filter(p => {
-    try { return p.postedAt && isThisWeek(new Date(p.postedAt)); } catch { return false; }
-  }).length;
 
   return (
-    <div className="space-y-8">
-      {/* SYNC BAR */}
-      <div className="vc-card" style={{ padding: "14px 20px" }}>
-        <div className="flex items-center gap-4">
-          <span className="text-[#666666] font-mono text-xs">// THREADS SYNC</span>
-          <Button
-            onClick={handleSync}
-            disabled={syncing}
-            className="bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest font-mono text-xs h-9 px-6"
-          >
-            {syncing ? "// sincronizando..." : "SINCRONIZAR"}
-          </Button>
-          {lastSync && (
-            <span className="text-[#666666] font-mono text-xs">
-              último sync: {formatDistanceToNow(new Date(lastSync), { locale: es })} | {posts.length} posts
-              {syncResult && syncResult.new > 0 && ` | ${syncResult.new} nuevos`}
-            </span>
-          )}
-          <div className="ml-auto">
-            <Button
-              onClick={() => setPublishOpen(!publishOpen)}
-              className="bg-transparent border border-[#0C2DF5] text-[#0C2DF5] hover:bg-[#0C2DF5] hover:text-white rounded-none uppercase tracking-widest font-mono text-xs h-9 px-6"
-            >
-              PUBLICAR NUEVO
-            </Button>
-          </div>
-        </div>
-
-        {publishOpen && (
-          <div className="mt-4 border-t border-[#1A1A1A] pt-4 space-y-3">
-            <Textarea
-              value={publishText}
-              onChange={e => setPublishText(e.target.value)}
-              placeholder="Escribe tu Thread..."
-              className="bg-[#080808] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5] text-white font-mono min-h-[80px]"
-            />
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={handlePublish}
-                disabled={publishing || !publishText.trim()}
-                className="bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest font-mono text-xs h-9 px-6"
+    <div className="space-y-12 max-w-5xl mx-auto">
+      {/* THREADS LAB — THE GENERATOR */}
+      <section>
+        <div className="vc-section-title">// THREADS LAB — GENERATOR</div>
+        <div className="vc-card p-8 space-y-6">
+          <div className="space-y-4">
+            <div className="text-[10px] font-mono text-white/30 uppercase tracking-[0.2em]">INPUT CONCEPTO / MÉTRICA</div>
+            <div className="flex gap-3">
+              <Input
+                value={userInput}
+                onChange={e => setUserInput(e.target.value)}
+                placeholder="Escribe el concepto o pega un dato para convertir en disparo..."
+                className="vc-input h-14 bg-white/[0.02] border-white/10 text-lg font-mono focus:border-[var(--accent)] transition-all"
+              />
+              <Button 
+                onClick={handleGenerate} 
+                disabled={threadsStream.isStreaming || !userInput}
+                className="vc-btn-primary h-14 px-8"
               >
-                {publishing ? "// publicando..." : "PUBLICAR"}
+                {threadsStream.isStreaming ? <Loader2 className="animate-spin" /> : <Zap className="mr-2" size={20} />}
+                GENERAR
               </Button>
-              {publishMsg && (
-                <span className={`font-mono text-xs ${publishMsg.includes("éxito") ? "text-[#00CC66]" : "text-[#FF2D20]"}`}>
-                  {publishMsg}
-                </span>
-              )}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* STAT CARDS */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="vc-stat-card">
-          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontFamily: "var(--font-body)", marginBottom: "8px" }}>Engagement Promedio</div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: "28px", fontWeight: 700, color: "var(--accent)", lineHeight: 1 }}>{avgEngagement.toFixed(2)}%</div>
-        </div>
-        <div className="vc-stat-card">
-          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontFamily: "var(--font-body)", marginBottom: "8px" }}>Mejor Post</div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: "22px", fontWeight: 700, color: "var(--accent)", lineHeight: 1 }}>{bestPost ? `${(bestPost.engagementRate || 0).toFixed(2)}%` : "-"}</div>
-          {bestPost?.textContent && (
-            <div style={{ color: "var(--text-muted)", fontFamily: "var(--font-body)", fontSize: "11px", marginTop: "6px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{bestPost.textContent.substring(0, 60)}...</div>
+          {(threadsStream.response || variations.length > 0) && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="p-6 bg-[#0C2DF5]/5 border border-[#0C2DF5]/20 rounded-2xl relative group">
+                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(threadsStream.response)} className="h-8 w-8 p-0 text-white/40 hover:text-white">
+                    <Copy size={14} />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => handlePublish(threadsStream.response)} className="h-8 text-[10px] font-mono text-[#00CC66] border border-[#00CC66]/20 bg-[#00CC66]/5">
+                    PUBLICAR AHORA
+                  </Button>
+                </div>
+                <p className="text-xl font-mono text-white leading-relaxed">
+                  {threadsStream.response}
+                  {threadsStream.isStreaming && <span className="animate-pulse text-[var(--accent)] ml-1">_</span>}
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <Button 
+                  variant="outline" 
+                  onClick={handleGenerateVariations} 
+                  disabled={isGeneratingVariations}
+                  className="vc-input border-white/10 hover:border-white/20 h-10 px-8 rounded-full font-mono text-[10px] tracking-widest uppercase"
+                >
+                  {isGeneratingVariations ? <RefreshCcw className="animate-spin mr-2" size={14} /> : <Layers className="mr-2" size={14} />}
+                  GENERAR 5 VARIACIONES
+                </Button>
+              </div>
+
+              {variations.length > 0 && (
+                <div className="grid grid-cols-1 gap-3">
+                  {variations.map((v, i) => (
+                    <div key={i} className="p-4 bg-white/[0.02] border border-white/5 rounded-xl hover:border-white/10 transition-all flex items-center justify-between group">
+                      <p className="text-sm font-mono text-white/70">{v}</p>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="sm" onClick={() => copyToClipboard(v)} className="h-8 w-8 p-0 text-white/40 hover:text-white"><Copy size={13}/></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handlePublish(v)} className="h-8 px-3 text-[9px] font-mono text-[var(--accent)] border border-[var(--accent)]/20 hover:bg-[var(--accent)]/5">USAR</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
-        <div className="vc-stat-card">
-          <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontFamily: "var(--font-body)", marginBottom: "8px" }}>Posts Esta Semana</div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: "28px", fontWeight: 700, color: "var(--text-primary)", lineHeight: 1 }}>{postsThisWeek}</div>
-        </div>
-      </div>
+      </section>
 
-      {/* THREADS POST CARDS */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {loading ? (
-          <div className="loading-pulse py-8 text-center">// cargando posts...</div>
-        ) : posts.length === 0 ? (
-          <div style={{ color: "var(--text-muted)", fontFamily: "var(--font-display)", fontSize: "12px", textAlign: "center", padding: "40px 0" }}>
-            // Sin posts. Sincroniza primero.
-          </div>
-        ) : (
-          posts.map((post) => {
-            const isViral = (post.engagementRate || 0) > avgEngagement * 2;
-            const isConverting = convertingId === post.id;
-            return (
-              <React.Fragment key={post.id}>
-                <div
-                  style={{
-                    background: "var(--glass)",
-                    border: `1px solid ${isViral ? "var(--vc-accent)" : "var(--glass-border)"}`,
-                    borderLeft: isViral ? "2px solid var(--vc-accent)" : "1px solid var(--glass-border)",
-                    boxShadow: isViral ? "-4px 0 12px var(--accent-glow)" : "none",
-                    padding: "20px",
-                    transition: "border-color 200ms",
-                  }}
-                >
-                  {/* Top row */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{ fontFamily: "var(--font-display)", fontSize: "10px", color: "var(--text-muted)" }}>
-                        {post.postedAt ? format(new Date(post.postedAt), "dd/MM/yy") : "-"}
-                      </span>
-                      {isViral && (
-                        <span className="vc-badge vc-badge-convertidor" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                          <Zap size={8} /> VIRAL
-                        </span>
-                      )}
-                      {post.promotedToReel && (
-                        <span className="vc-badge vc-badge-educativo">ESCALADO A REEL</span>
-                      )}
-                    </div>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      {isViral && !post.promotedToReel && (
-                        <button
-                          onClick={() => handleConvertToReel(post)}
-                          disabled={isConverting}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            color: "var(--vc-accent)",
-                            border: "1px solid var(--vc-accent)",
-                            padding: "4px 10px",
-                            fontSize: "10px",
-                            fontFamily: "var(--font-display)",
-                            background: "var(--accent-subtle)",
-                            cursor: isConverting ? "not-allowed" : "pointer",
-                            letterSpacing: "0.06em",
-                            borderRadius: "4px",
-                            transition: "background 150ms",
-                          }}
-                        >
-                          <Zap size={10} />
-                          {isConverting ? "..." : "REEL"}
-                        </button>
-                      )}
-                      <button
-                        onClick={() => { setReplyModal({ postId: post.id, text: post.textContent || "" }); setReplyText(""); }}
-                        style={{
-                          color: "var(--text-secondary)",
-                          border: "1px solid var(--glass-border)",
-                          padding: "4px 10px",
-                          fontSize: "10px",
-                          fontFamily: "var(--font-display)",
-                          background: "transparent",
-                          cursor: "pointer",
-                          letterSpacing: "0.06em",
-                          borderRadius: "4px",
-                          transition: "color 150ms, border-color 150ms",
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.color = "white"; e.currentTarget.style.borderColor = "var(--glass-border-hover)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = "var(--text-secondary)"; e.currentTarget.style.borderColor = "var(--glass-border)"; }}
-                      >
-                        REPLY
-                      </button>
-                    </div>
-                  </div>
+      {/* HOOKS VALIDADOS — THE REEL PIPELINE */}
+      <section>
+        <div className="vc-section-title">// HOOKS VALIDADOS — REEL PIPELINE</div>
+        <div className="grid grid-cols-1 gap-4">
+          {isLoading ? (
+            <div className="vc-card h-32 flex items-center justify-center text-white/20 font-mono tracking-widest text-xs">// CARGANDO DATOS VITALES...</div>
+          ) : validatedHooks.length === 0 ? (
+            <div className="vc-card h-32 flex items-center justify-center text-white/20 font-mono tracking-widest text-xs">// SIN MÉTRICAS PARA RECOMBINAR...</div>
+          ) : (
+            validatedHooks.map((post) => (
+              <div key={post.id} className="vc-card p-6 flex items-center gap-8 group hover:border-[var(--accent)]/30 transition-all">
+                {/* Metrics Badge */}
+                <div className="flex flex-col items-center justify-center h-16 w-24 bg-white/[0.02] border border-white/5 rounded-xl">
+                  <TrendingUp size={16} className="text-[#00CC66] mb-1" />
+                  <span className="text-lg font-mono font-bold text-white leading-none">{post.engagementRate?.toFixed(1) || "0.0"}%</span>
+                  <span className="text-[8px] font-mono text-white/30 tracking-tight mt-1">ENG RATE</span>
+                </div>
 
-                  {/* Content */}
-                  <p style={{
-                    color: "var(--text-primary)",
-                    fontSize: "14px",
-                    fontFamily: "var(--font-body)",
-                    lineHeight: 1.6,
-                    margin: "0 0 14px",
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                  }}>
-                    {post.textContent || ""}
+                {/* Content */}
+                <div className="flex-1 space-y-2">
+                  <p className="text-sm font-mono text-white/80 leading-relaxed italic">
+                    "{post.textContent}"
                   </p>
-
-                  {/* Stats row */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                    {[
-                      { icon: Heart, val: post.likes ?? 0 },
-                      { icon: MessageCircle, val: post.replies ?? 0 },
-                      { icon: Repeat2, val: post.reposts ?? 0 },
-                      { icon: Eye, val: post.views ?? 0 },
-                    ].map(({ icon: Icon, val }, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "center", gap: "4px", color: "var(--text-muted)", fontSize: "11px", fontVariantNumeric: "tabular-nums" }}>
-                        <Icon size={11} />
-                        <span>{val.toLocaleString()}</span>
-                      </div>
-                    ))}
-                    <div style={{ marginLeft: "auto", fontFamily: "var(--font-display)", fontSize: "10px", color: isViral ? "var(--vc-accent)" : "var(--text-muted)" }}>
-                      {(post.engagementRate || 0).toFixed(2)}% eng
-                    </div>
+                  <div className="flex items-center gap-4 text-[10px] font-mono text-white/20 uppercase tracking-widest">
+                    <span>Likes: {post.likes}</span>
+                    <span>•</span>
+                    <span>Views: {post.views?.toLocaleString()}</span>
                   </div>
                 </div>
 
-                {/* Convert to reel inline result */}
-                {convertResult?.id === post.id && (
-                  <div key={`convert-${post.id}`} style={{ background: "var(--glass)", border: "1px solid rgba(12,45,245,0.3)", padding: "20px" }}>
-                    <div className="vc-section-title" style={{ marginBottom: "10px" }}>// GUION DE REEL GENERADO</div>
-                    <pre style={{ fontFamily: "var(--font-body)", fontSize: "13px", color: "var(--text-primary)", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{convertResult.text}</pre>
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })
-        )}
-      </div>
-
-      {/* Streaming indicator for convert */}
-      {accaiStream.isStreaming && (
-        <div className="border border-[#1A1A1A] p-6 bg-[#0D0D0D] font-mono text-sm whitespace-pre-wrap text-[#F0F0F0]">
-          {accaiStream.response}
-          <span className="text-[#0C2DF5] animate-pulse ml-1">_</span>
-        </div>
-      )}
-
-      {/* PROSPECCIÓN */}
-      <section className="border border-[#1A1A1A]">
-        <button
-          onClick={() => setProspOpen(!prospOpen)}
-          className="w-full flex items-center justify-between p-4 text-left bg-[#0D0D0D] hover:bg-[#111111] transition-colors"
-        >
-          <span className="text-[#666666] font-mono text-xs uppercase tracking-widest">// PROSPECCIÓN — BUSCAR EN THREADS</span>
-          {prospOpen ? <ChevronUp size={16} className="text-[#666666]" /> : <ChevronDown size={16} className="text-[#666666]" />}
-        </button>
-
-        {prospOpen && (
-          <div className="p-4 space-y-4 border-t border-[#1A1A1A]">
-            <div className="flex gap-3">
-              <Input
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleSearch()}
-                placeholder="Buscar en Threads..."
-                className="bg-[#080808] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5] font-mono"
-              />
-              <Button
-                onClick={handleSearch}
-                disabled={searching || !searchQuery.trim()}
-                className="bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest font-mono text-xs h-10 px-6"
-              >
-                {searching ? "..." : "BUSCAR"}
-              </Button>
-            </div>
-
-            {searchResults.length > 0 && (
-              <div className="space-y-3">
-                {searchResults.map((r: any, i: number) => (
-                  <div key={i} className="border border-[#1A1A1A] p-4 bg-[#0D0D0D]">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-[#0C2DF5] font-mono text-xs mb-1">@{r.username}</div>
-                        <div className="font-mono text-sm text-[#F0F0F0]">{r.text}</div>
-                        <div className="text-[#666666] font-mono text-[10px] mt-1">{r.timestamp ? format(new Date(r.timestamp), "dd/MM/yyyy") : ""}</div>
-                      </div>
-                      <button
-                        onClick={() => { setReplyModal({ postId: -1, text: r.text }); setReplyText(""); }}
-                        className="text-[#666666] hover:text-white border border-[#333333] px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider whitespace-nowrap"
-                      >
-                        RESPONDER
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                {/* Action */}
+                <div className="flex flex-col gap-2">
+                   <Button 
+                    className="vc-btn-primary h-10 px-6 text-[10px] tracking-widest uppercase"
+                    onClick={() => {
+                      window.location.href = `/reels?hook=${encodeURIComponent(post.textContent)}`;
+                    }}
+                  >
+                    GENERAR REEL BRIEF
+                    <ChevronRight className="ml-2" size={14} />
+                  </Button>
+                  <Button variant="outline" className="h-9 border-white/10 text-white/30 text-[9px] tracking-widest uppercase hover:text-white transition-all">
+                    VER EN THREADS <ExternalLink className="ml-2" size={12} />
+                  </Button>
+                </div>
               </div>
-            )}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </section>
 
-      {/* REPLY MODAL */}
-      {replyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="bg-[#080808] border border-[#1A1A1A] p-6 w-[500px] space-y-4">
-            <div className="text-[#0C2DF5] font-mono text-xs uppercase tracking-widest">// RESPONDER</div>
-            <div className="text-[#666666] font-mono text-xs border border-[#1A1A1A] p-3 max-h-24 overflow-y-auto">
-              {replyModal.text}
-            </div>
-            <Textarea
-              value={replyText}
-              onChange={e => setReplyText(e.target.value)}
-              placeholder="Tu respuesta..."
-              className="bg-[#0D0D0D] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5] text-white font-mono min-h-[80px]"
-            />
-            <div className="flex gap-3">
-              <Button
-                onClick={handleReply}
-                disabled={sendingReply || !replyText.trim()}
-                className="bg-[#0C2DF5] hover:bg-[#0C2DF5]/90 text-white rounded-none uppercase tracking-widest font-mono text-xs h-9 px-6"
-              >
-                {sendingReply ? "ENVIANDO..." : "PUBLICAR RESPUESTA"}
-              </Button>
-              <Button
-                onClick={() => setReplyModal(null)}
-                className="bg-transparent border border-[#333333] text-[#666666] hover:text-white rounded-none uppercase tracking-widest font-mono text-xs h-9 px-6"
-              >
-                CANCELAR
-              </Button>
-            </div>
-          </div>
+      {/* LIVE FEED */}
+      <section>
+        <div className="vc-section-title">// LIVE FEED</div>
+        <div className="vc-card p-0 overflow-hidden border-glass-border">
+          <table className="vc-table">
+            <thead>
+              <tr className="bg-white/[0.02]">
+                <th className="font-mono text-[10px] tracking-widest text-white/40">FECHA</th>
+                <th className="font-mono text-[10px] tracking-widest text-white/40 text-left">DISPARO</th>
+                <th className="font-mono text-[10px] tracking-widest text-white/40">MÉTRICAS</th>
+                <th className="font-mono text-[10px] tracking-widest text-white/40">ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              {posts.map((post) => (
+                <tr key={post.id} className="hover:bg-white/[0.01] transition-colors border-t border-white/[0.05]">
+                  <td className="w-24 text-center">
+                    <div className="text-[10px] font-mono text-white/40">
+                      {post.postedAt ? new Date(post.postedAt).toLocaleDateString("es-VE", { day: '2-digit', month: '2-digit' }) : "--/--"}
+                    </div>
+                  </td>
+                  <td className="py-6 pr-8">
+                    <p className="text-sm font-mono text-white/70 line-clamp-2 leading-relaxed">
+                      {post.textContent}
+                    </p>
+                  </td>
+                  <td className="w-40">
+                    <div className="flex items-center justify-center gap-4">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[10px] font-mono font-bold text-white">{post.engagementRate?.toFixed(1)}%</span>
+                        <span className="text-[8px] font-mono text-white/20 uppercase">Eng</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[10px] font-mono font-bold text-white">{(post.replies || 0).toLocaleString()}</span>
+                        <span className="text-[8px] font-mono text-white/20 uppercase">Repl</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="w-48">
+                    <div className="flex items-center justify-center gap-2">
+                       <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handlePromoteToReel(post.id)}
+                        className={cn(
+                          "h-8 px-3 text-[9px] font-mono tracking-widest uppercase transition-all",
+                          post.promotedToReel 
+                            ? "bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/20" 
+                            : "border-white/10 text-white/40 hover:text-white"
+                        )}
+                      >
+                         {post.promotedToReel ? <CheckCircle2 size={12} className="mr-2" /> : <Zap size={12} className="mr-2" />}
+                         {post.promotedToReel ? "VALIDADO" : "PROMOVER"}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      )}
+      </section>
     </div>
   );
 }

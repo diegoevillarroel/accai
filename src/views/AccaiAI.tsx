@@ -14,16 +14,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAccaiStream } from "@/lib/useAccaiStream";
 
-type Mode = "BRIEF" | "AUTOPSIA" | "ESTRATEGIA" | "COMPETENCIA" | "RESPONDER" | "CIERRE DM" | "PATRONES";
+type Mode = "WEEKLY_BRIEF" | "BRIEF" | "THREADS" | "AUTOPSIA" | "COMPETENCIA" | "CIERRE DM" | "PATRONES" | "RESPONDER";
 
 const MODES: { id: Mode; label: string; description: string }[] = [
-  { id: "BRIEF", label: "BRIEF DE CONTENIDO", description: "Genera el próximo reel basado en tu historial" },
+  { id: "WEEKLY_BRIEF", label: "BRIEF SEMANAL", description: "Diagnóstico de los últimos 7 días y prioridad estratégica" },
+  { id: "BRIEF", label: "GUION REEL", description: "Genera el próximo reel (HOOK -> RETENCIÓN -> CTA)" },
+  { id: "THREADS", label: "THREADS", description: "Genera statements de operador para Threads" },
   { id: "AUTOPSIA", label: "AUTOPSIA DE REEL", description: "Disecciona el rendimiento de un reel específico" },
-  { id: "ESTRATEGIA", label: "ESTRATEGIA GENERAL", description: "Análisis estratégico completo" },
   { id: "COMPETENCIA", label: "ANÁLISIS DE COMPETENCIA", description: "Detecta brechas estratégicas" },
-  { id: "RESPONDER", label: "RESPONDER COMENTARIOS", description: "Redacta respuestas para comentarios sin responder" },
   { id: "CIERRE DM", label: "CIERRE DM", description: "Genera guion de cierre para conversaciones" },
-  { id: "PATRONES", label: "PATRONES LINGÜÍSTICOS", description: "Reverse-engineering de hooks y vocabulario viral desde transcripciones reales" },
+  { id: "PATRONES", label: "PATRONES LINGÜÍSTICOS", description: "Reverse-engineering de hooks y vocabulario viral" },
+  { id: "RESPONDER", label: "RESPONDER COMENTARIOS", description: "Redacta respuestas para comentarios sin responder" },
 ];
 
 interface Comment {
@@ -114,12 +115,23 @@ export function AccaiAI() {
   const handleRun = async () => {
     let prompt = userInput;
 
+    if (selectedMode === "WEEKLY_BRIEF") {
+      const recentReels = reels.slice(0, 10).map(r =>
+        `- ${format(new Date(r.fecha), "dd/MM")} | ${r.tema || "sin tema"} | Views: ${r.views.toLocaleString()} | Saves: ${r.savesPct.toFixed(1)}% | Firma: ${r.firma}`
+      ).join("\n");
+      prompt = `DATOS ÚLTIMOS 7 DÍAS:\n${recentReels}\n\n${userInput ? `NOTAS ADICIONALES: ${userInput}` : ""}`;
+    }
+
     if (selectedMode === "BRIEF") {
       const directiveText = directive?.content || "Sin directiva definida";
       const recentReels = reels.slice(0, 10).map(r =>
         `- ${format(new Date(r.fecha), "dd/MM")} | ${r.tema || "sin tema"} | ${r.firma} | ${r.views.toLocaleString()} views | saves: ${r.savesPct.toFixed(1)}%`
       ).join("\n");
-      prompt = `DIRECTIVA ACTUAL: ${directiveText}\n\nÚLTIMOS REELS:\n${recentReels}\n\n${userInput ? `CONTEXTO ADICIONAL: ${userInput}` : ""}`;
+      prompt = `DIRECTIVA ACTUAL: ${directiveText}\n\nÚLTIMOS REELS (DATOS DE RETENCIÓN):\n${recentReels}\n\n${userInput ? `INSTRUCCIONES: ${userInput}` : ""}`;
+    }
+
+    if (selectedMode === "THREADS") {
+      prompt = userInput || "Generar statements de operador basados en la directiva actual.";
     }
 
     if (selectedMode === "AUTOPSIA" && selectedReelId) {
@@ -320,7 +332,20 @@ export function AccaiAI() {
 
         {/* RIGHT: Response */}
         <div className="col-span-2 space-y-4">
-          <div className="vc-section-title">// RESPUESTA</div>
+          <div className="flex items-center justify-between">
+            <div className="vc-section-title">// RESPUESTA</div>
+            {accaiStream.response && !accaiStream.isStreaming && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(accaiStream.response || "");
+                  alert("Contenido copiado.");
+                }}
+                className="font-mono text-[10px] text-[var(--vc-accent)] hover:text-white transition-colors"
+              >
+                [ COPIAR CONTENIDO ]
+              </button>
+            )}
+          </div>
           <div
             ref={responseRef}
             className="vc-preview-panel min-h-[400px] max-h-[min(600px,70vh)] overflow-y-auto p-6 font-mono text-[13px] leading-[1.85] text-white/90 [white-space:pre-wrap]"

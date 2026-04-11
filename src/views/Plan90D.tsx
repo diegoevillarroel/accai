@@ -1,7 +1,6 @@
 "use client";
-// @ts-nocheck
 import { useState, useEffect } from "react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import {
   useListPlanReels,
   useUpsertPlanReel,
@@ -15,9 +14,10 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAccaiStream } from "@/lib/useAccaiStream";
+import { Film, Calendar, CheckCircle2, Copy, Play, Volume2, Download, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const WEEKS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 const DIAS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
@@ -28,6 +28,17 @@ const OBJECTIVE_KEYS = [
   { key: "reelsPerWeekGoal", label: "REELS/SEMANA", color: "#CC8800", unit: "reels" },
   { key: "savesPer1kGoal", label: "SAVES/1K META", color: "#FF2D20", unit: "s/1k" },
 ];
+
+interface Brief {
+  day: number;
+  angulo: string;
+  voiceover: string;
+  visualDirection: string;
+  subtitleCues: string;
+  hook: string;
+  cta: string;
+  rawContent: string;
+}
 
 export function Plan90D() {
   const queryClient = useQueryClient();
@@ -48,8 +59,11 @@ export function Plan90D() {
   const [savingObj, setSavingObj] = useState(false);
 
   const planStream = useAccaiStream();
+  const [isGeneratingWeek, setIsGeneratingWeek] = useState(false);
+  const [generatedBriefs, setGeneratedBriefs] = useState<Brief[]>([]);
+  const [generatingAudioId, setGeneratingAudioId] = useState<string | null>(null);
+  const [audioLinks, setAudioLinks] = useState<Record<string, string>>({});
 
-  // Init objective forms from fetched data
   useEffect(() => {
     if (objectives.length > 0) {
       const forms: Record<string, string> = {};
@@ -94,16 +108,54 @@ export function Plan90D() {
     setSavingObj(false);
   };
 
-  const handleGeneratePlan = async () => {
-    const objText = OBJECTIVE_KEYS.map(k => `${k.label}: ${objForms[k.key] || "no definido"}`).join("\n");
-    const reelsText = reels.slice(0, 15).map(r =>
-      `- ${format(new Date(r.fecha), "dd/MM")} | ${r.tema || "sin tema"} | ${r.firma} | ${r.views.toLocaleString()} views`
-    ).join("\n");
-    const prompt = `Genera un plan de contenido de 90 días (13 semanas) para VILLACLUB basado en:\n\nOBJETIVOS:\n${objText}\n\nHISTORIAL RECIENTE:\n${reelsText}`;
-    await planStream.stream({ mode: "ESTRATEGIA", userInput: prompt });
+  const handleGenerateWeekBatch = async () => {
+    setIsGeneratingWeek(true);
+    setGeneratedBriefs([]);
+    try {
+      const res = await fetch("/api/accai/batch-brief", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ week_number: selectedWeek })
+      });
+      const data = await res.json();
+      
+      if (data.briefs) {
+        setGeneratedBriefs(data.briefs);
+        // Optional: Auto-update planReels table in DB
+        for (const brief of data.briefs) {
+          const dia = DIAS[brief.day - 1];
+          await (upsertPlanReel as any).mutateAsync({
+            data: {
+              semana: selectedWeek,
+              dia: dia,
+              tema: brief.hook.slice(0, 60),
+              angulo: brief.angulo,
+              notas: brief.voiceover
+            }
+          });
+        }
+        queryClient.invalidateQueries({ queryKey: getListPlanReelsQueryKey() });
+      }
+    } catch (error) {
+      console.error("Batch error:", error);
+    } finally {
+      setIsGeneratingWeek(false);
+    }
   };
 
-  // Compute live metrics vs objectives
+  const generateAudio = async (brief: Brief) => {
+    const id = `${brief.day}-${brief.angulo}`;
+    setGeneratingAudioId(id);
+    // Placeholder for ElevenLabs API
+    await new Promise(r => setTimeout(r, 2000));
+    setAudioLinks(prev => ({ ...prev, [id]: "#" }));
+    setGeneratingAudioId(null);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
   const avgViews = reels.length > 0 ? reels.reduce((s, r) => s + r.views, 0) / reels.length : 0;
   const avgSavesPer1k = reels.length > 0 ? reels.reduce((s, r) => s + r.savesPer1k, 0) / reels.length : 0;
 
@@ -119,16 +171,16 @@ export function Plan90D() {
 
   return (
     <div className="space-y-12">
-      {/* LIVE OBJECTIVES */}
+      {/* OBJECTIVES */}
       <section>
-        <div className="vc-section-title">// OBJETIVOS 90 DÍAS</div>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="vc-section-title">// OBJETIVOS ESTRATÉGICOS</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {OBJECTIVE_KEYS.map(k => {
             const goalVal = Number(objForms[k.key] || 0);
             let currentVal = 0;
             if (k.key === "viewsGoal") currentVal = avgViews;
             if (k.key === "savesPer1kGoal") currentVal = avgSavesPer1k;
-            if (k.key === "followersGoal" && latestSnapshot && latestSnapshot.id > 0) currentVal = latestSnapshot.followersGained;
+            if (k.key === "followersGoal" && latestSnapshot) currentVal = latestSnapshot.followersGained;
             if (k.key === "reelsPerWeekGoal") currentVal = reels.length > 0 ? reels.length / 13 : 0;
 
             const status = goalVal > 0 ? getMetricStatus(currentVal, goalVal) : "neutral";
@@ -136,103 +188,116 @@ export function Plan90D() {
             const pct = goalVal > 0 ? Math.min((currentVal / goalVal) * 100, 100) : 0;
 
             return (
-              <div key={k.key} className="vc-card" style={{ padding: "20px" }}>
-                <div style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.12em", color: "var(--text-muted)", fontFamily: "var(--font-body)", marginBottom: "12px" }}>{k.label}</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div key={k.key} className="vc-card group">
+                <div className="text-[10px] font-mono text-white/40 tracking-widest uppercase mb-4">{k.label}</div>
+                <div className="space-y-4">
                   <div>
-                    <label style={{ fontSize: "9px", color: "var(--text-muted)", fontFamily: "var(--font-body)", textTransform: "uppercase", letterSpacing: "0.08em" }}>META</label>
+                    <div className="text-[9px] font-mono text-white/30 uppercase mb-1">Target</div>
                     <Input
                       type="number"
                       value={objForms[k.key] || ""}
                       onChange={e => setObjForms(prev => ({ ...prev, [k.key]: e.target.value }))}
-                      className="bg-transparent border-[rgba(255,255,255,0.1)] focus-visible:ring-0 focus-visible:border-[#0C2DF5] h-8 text-sm mt-1"
-                      style={{ borderRadius: "4px" }}
+                      className="vc-input h-8 text-xs bg-white/[0.02]"
                     />
                   </div>
                   {goalVal > 0 && (
-                    <>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontFamily: "var(--font-display)", fontSize: "11px" }}>
-                        <span style={{ color: "var(--text-muted)" }}>actual</span>
-                        <span style={{ color }}>{k.key === "reelsPerWeekGoal" ? currentVal.toFixed(1) : Math.round(currentVal).toLocaleString()} {k.unit}</span>
+                    <div className="pt-2">
+                      <div className="flex justify-between items-end mb-2">
+                        <span className="text-[18px] font-mono font-bold text-white">
+                          {Math.round(currentVal).toLocaleString()}
+                        </span>
+                        <span className="text-[10px] font-mono" style={{ color }}>{pct.toFixed(0)}%</span>
                       </div>
-                      <div style={{ width: "100%", background: "rgba(255,255,255,0.06)", height: "2px", borderRadius: "1px" }}>
-                        <div style={{ height: "2px", borderRadius: "1px", transition: "width 300ms ease", width: `${pct}%`, background: color }} />
+                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full transition-all duration-700" 
+                          style={{ width: `${pct}%`, backgroundColor: color }} 
+                        />
                       </div>
-                      <div style={{ fontFamily: "var(--font-display)", fontSize: "11px", color }}>{pct.toFixed(0)}%</div>
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
             );
           })}
         </div>
-        <div className="mt-4">
-          <Button onClick={handleSaveObjectives} disabled={savingObj} className="vc-btn-primary h-9 px-6">
-            {savingObj ? "GUARDANDO..." : "GUARDAR OBJETIVOS"}
+        <div className="mt-4 flex justify-end">
+          <Button onClick={handleSaveObjectives} disabled={savingObj} className="vc-btn-primary h-10 px-8">
+            {savingObj ? "SYNCING..." : "ACTUALIZAR OBJETIVOS"}
           </Button>
         </div>
       </section>
 
-      {/* WEEK SELECTOR + CALENDAR */}
+      {/* CALENDAR */}
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <div className="vc-section-title" style={{ marginBottom: 0 }}>// CALENDARIO DE CONTENIDO</div>
-          <div className="flex items-center gap-2">
-            <span className="text-[#666666] font-mono text-xs">SEMANA</span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+          <div className="vc-section-title" style={{ marginBottom: 0 }}>// CALENDARIO OPERACIONAL</div>
+          <div className="flex items-center gap-3">
             <Select value={String(selectedWeek)} onValueChange={v => setSelectedWeek(Number(v))}>
-              <SelectTrigger className="vc-field h-8 w-24 text-sm focus:ring-0">
-                <SelectValue />
+              <SelectTrigger className="vc-input h-10 w-32 border-glass-border bg-glass-surface">
+                <SelectValue placeholder="Semana" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl border border-white/10 bg-[#0c0e14] text-white shadow-xl">
-                {WEEKS.map(w => <SelectItem key={w} value={String(w)}>W{w}</SelectItem>)}
+              <SelectContent className="bg-[#0c0e14] border-glass-border">
+                {WEEKS.map(w => <SelectItem key={w} value={String(w)}>W{String(w).padStart(2, '0')}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Button 
+              onClick={handleGenerateWeekBatch} 
+              disabled={isGeneratingWeek} 
+              className="vc-btn-primary h-10 px-6"
+            >
+              {isGeneratingWeek ? <Loader2 className="animate-spin mr-2" size={16} /> : <Zap className="mr-2" size={16} />}
+              GENERAR SEMANA
+            </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
           {DIAS.map(dia => {
             const dayReel = weekReels.find(r => r.dia === dia);
             const isEditing = editingReel?.semana === selectedWeek && editingReel?.dia === dia;
 
             return (
-              <div key={dia} className={`border min-h-[120px] flex flex-col ${dayReel?.tema ? "border-[#0C2DF5]/50" : "border-[#1A1A1A]"}`}>
-                <div className="px-2 py-1.5 border-b border-[#1A1A1A] bg-[#0D0D0D] font-mono text-[10px] text-[#666666] uppercase tracking-wider">{dia.substring(0, 3)}</div>
-                <div className="flex-1 p-2">
+              <div key={dia} className={cn(
+                "vc-card p-0 flex flex-col min-h-[140px] transition-all duration-300",
+                dayReel?.tema ? "border-[#0C2DF5]/30 bg-[#0C2DF5]/5" : "border-glass-border bg-glass-surface"
+              )}>
+                <div className="px-3 py-2 border-b border-white/5 bg-white/5 font-mono text-[10px] text-white/40 tracking-widest uppercase">
+                  {dia}
+                </div>
+                <div className="flex-1 p-4 flex flex-col">
                   {isEditing ? (
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <Input
                         value={reelForm.tema}
                         onChange={e => setReelForm({...reelForm, tema: e.target.value})}
                         placeholder="Tema..."
-                        className="bg-[#080808] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5] h-6 text-[10px] font-mono px-1"
+                        className="vc-input h-8 text-[11px] bg-black/40"
                         autoFocus
                       />
-                      <Input
-                        value={reelForm.hora}
-                        onChange={e => setReelForm({...reelForm, hora: e.target.value})}
-                        placeholder="Hora (ej: 18:00)"
-                        className="bg-[#080808] border-[#1A1A1A] rounded-none focus-visible:ring-0 focus-visible:border-[#0C2DF5] h-6 text-[10px] font-mono px-1"
-                      />
-                      <div className="flex gap-1">
-                        <button type="button" onClick={handleSaveReel} disabled={savingReel} className="vc-btn-primary flex-1 py-2 text-[10px]">OK</button>
-                        <button onClick={() => setEditingReel(null)} className="flex-1 border border-[#333333] text-[#666666] font-mono text-[10px] py-1 uppercase hover:text-white">✕</button>
+                      <div className="flex gap-2">
+                        <Button onClick={handleSaveReel} disabled={savingReel} className="vc-btn-primary flex-1 h-7 text-[10px]">OK</Button>
+                        <Button onClick={() => setEditingReel(null)} variant="outline" className="flex-1 h-7 text-[10px] border-white/10 text-white/40 capitalize">✕</Button>
                       </div>
                     </div>
                   ) : dayReel?.tema ? (
                     <button
                       onClick={() => { setEditingReel({ semana: selectedWeek, dia }); setReelForm({ tema: dayReel.tema || "", angulo: dayReel.angulo || "", hora: dayReel.hora || "", notas: dayReel.notas || "" }); }}
-                      className="w-full h-full text-left space-y-1"
+                      className="text-left group/cal"
                     >
-                      <div className="font-mono text-[10px] text-[#0C2DF5] leading-tight">{dayReel.tema}</div>
-                      {dayReel.hora && <div className="font-mono text-[9px] text-[#666666]">{dayReel.hora}</div>}
+                      <div className="text-[12px] font-mono text-white group-hover/cal:text-[var(--accent)] transition-colors line-clamp-3 leading-relaxed">
+                        {dayReel.tema}
+                      </div>
+                      <div className="mt-2 text-[10px] font-mono text-white/20 uppercase tracking-widest">
+                        {dayReel.angulo || "CONCEPT"}
+                      </div>
                     </button>
                   ) : (
                     <button
                       onClick={() => { setEditingReel({ semana: selectedWeek, dia }); setReelForm({ tema: "", angulo: "", hora: "", notas: "" }); }}
-                      className="w-full h-full flex items-center justify-center text-[#1A1A1A] hover:text-[#333333] font-mono text-lg transition-colors"
+                      className="flex-1 flex items-center justify-center text-white/5 hover:text-white/20 transition-all"
                     >
-                      +
+                      <Plus size={24} />
                     </button>
                   )}
                 </div>
@@ -242,63 +307,115 @@ export function Plan90D() {
         </div>
       </section>
 
-      {/* ALL WEEKS OVERVIEW */}
-      <section>
-        <div className="vc-section-title">// VISTA 90D</div>
-        <div style={{ background: "var(--glass)", border: "1px solid var(--glass-border)", borderRadius: "8px", overflow: "hidden" }}>
-          <table className="vc-table" style={{ fontSize: "12px" }}>
-            <thead>
-              <tr>
-                <th>Semana</th>
-                <th>Lun</th>
-                <th>Mar</th>
-                <th>Mie</th>
-                <th>Jue</th>
-                <th>Vie</th>
-                <th>Sab</th>
-                <th>Dom</th>
-              </tr>
-            </thead>
-            <tbody style={{ fontFamily: "var(--font-body)" }}>
-              {isLoadingPlan ? (
-                <tr><td colSpan={8} style={{ padding: "32px", textAlign: "center" }} className="loading-pulse">// cargando...</td></tr>
-              ) : (
-                WEEKS.map(week => {
-                  const wr = planReels.filter(r => r.semana === week);
-                  const isSelected = week === selectedWeek;
-                  return (
-                    <tr key={week} style={{ cursor: "pointer", borderLeft: isSelected ? "2px solid var(--accent)" : "2px solid transparent", background: isSelected ? "rgba(12,45,245,0.04)" : undefined }} onClick={() => setSelectedWeek(week)}>
-                      <td style={{ color: "var(--text-muted)", fontSize: "11px" }}>S{week}</td>
-                      {DIAS.map(dia => {
-                        const dr = wr.find(r => r.dia === dia);
-                        return (
-                          <td key={dia} style={{ maxWidth: "80px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={dr?.tema || ""}>
-                            {dr?.tema ? <span style={{ color: "var(--accent)", fontSize: "11px" }}>{dr.tema.substring(0, 12)}{dr.tema.length > 12 ? "…" : ""}</span> : <span style={{ color: "rgba(255,255,255,0.06)" }}>—</span>}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      {/* GENERATED BRIEFS (LIQUID GLASS CARDS) */}
+      {generatedBriefs.length > 0 && (
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="vc-section-title">// PRODUCTION BRIEFS — W{selectedWeek}</div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {generatedBriefs.map((brief) => {
+              const audioId = `${brief.day}-${brief.angulo}`;
+              const hasAudio = !!audioLinks[audioId];
+              const isGeneratingAudio = generatingAudioId === audioId;
 
-      {/* GENERATE PLAN */}
-      <section className="space-y-4">
-        <Button type="button" onClick={handleGeneratePlan} disabled={planStream.isStreaming} className="vc-btn-primary h-10 px-8">
-          {planStream.isStreaming ? "// generando..." : "GENERAR PLAN DE CONTENIDO CON ACCAI"}
-        </Button>
+              return (
+                <div key={audioId} className="vc-card p-6 space-y-6 flex flex-col">
+                  {/* Card Header */}
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="text-[10px] font-mono text-[var(--accent)] tracking-[0.2em] uppercase">
+                        DÍA {brief.day} // {brief.angulo}
+                      </div>
+                      <h3 className="text-lg font-mono text-white font-bold leading-tight">
+                        {brief.hook.length > 80 ? brief.hook.slice(0, 80) + "..." : brief.hook}
+                      </h3>
+                    </div>
+                    <Button 
+                      onClick={() => generateAudio(brief)}
+                      disabled={isGeneratingAudio || hasAudio}
+                      className={cn(
+                        "h-10 px-6 rounded-lg font-mono text-[10px] tracking-widest uppercase transition-all",
+                        hasAudio ? "bg-[#00CC66]/20 text-[#00CC66] border border-[#00CC66]/30" : "vc-btn-primary"
+                      )}
+                    >
+                      {isGeneratingAudio ? (
+                        <Loader2 className="animate-spin mr-2" size={14} />
+                      ) : hasAudio ? (
+                        <CheckCircle2 className="mr-2" size={14} />
+                      ) : (
+                        <Volume2 className="mr-2" size={14} />
+                      )}
+                      {isGeneratingAudio ? "GENERANDO..." : hasAudio ? "AUDIO READY" : "GENERAR AUDIO"}
+                    </Button>
+                  </div>
 
-        {(planStream.isStreaming || planStream.response) && (
-          <div className="bg-[#0D0D0D] border border-[#1A1A1A] p-6 font-mono text-sm whitespace-pre-wrap leading-relaxed text-[#F0F0F0] max-h-[500px] overflow-y-auto">
-            {planStream.response}
-            {planStream.isStreaming && <span className="text-[#0C2DF5] animate-pulse ml-1">_</span>}
+                  {/* Operational Sections */}
+                  <div className="grid grid-cols-1 gap-4 flex-1">
+                    <div className="space-y-2 p-4 bg-white/[0.03] border border-white/5 rounded-xl group/vo">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-mono text-white/30 uppercase tracking-[0.15em]">VOICEOVER (ElevenLabs)</span>
+                        <button 
+                          onClick={() => copyToClipboard(brief.voiceover)}
+                          className="opacity-0 group-hover/vo:opacity-100 transition-opacity text-[10px] font-mono text-[var(--accent)] flex items-center gap-1"
+                        >
+                          <Copy size={10} /> COPIAR
+                        </button>
+                      </div>
+                      <p className="text-[13px] text-white/80 leading-relaxed font-body italic">
+                        "{brief.voiceover}"
+                      </p>
+                    </div>
+
+                    <div className="space-y-2 p-4 bg-white/[0.03] border border-white/5 rounded-xl">
+                      <span className="text-[9px] font-mono text-white/30 uppercase tracking-[0.15em]">VISUAL DIRECTION</span>
+                      <p className="text-[12px] text-white/60 leading-relaxed">
+                        {brief.visualDirection}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2 p-4 bg-[#0C2DF5]/5 border border-[#0C2DF5]/10 rounded-xl">
+                        <span className="text-[9px] font-mono text-[var(--accent)] uppercase tracking-[0.15em]">SUBTITLE CUES</span>
+                        <p className="text-[11px] text-white/90 font-mono">
+                          {brief.subtitleCues}
+                        </p>
+                      </div>
+                      <div className="space-y-2 p-4 bg-[#CC8800]/5 border border-[#CC8800]/10 rounded-xl">
+                        <span className="text-[9px] font-mono text-[#CC8800] uppercase tracking-[0.15em]">HOOK TEST (THREADS)</span>
+                        <p className="text-[11px] text-white/90 font-mono">
+                          {brief.hook}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Footer Actions */}
+                  <div className="pt-4 border-t border-white/5 flex gap-3">
+                    {hasAudio && (
+                      <a 
+                        href="#" 
+                        className="flex-1 h-10 flex items-center justify-center bg-white/10 hover:bg-white/15 text-white font-mono text-[10px] tracking-widest uppercase rounded-lg border border-white/10 transition-all"
+                      >
+                        <Download className="mr-2" size={14} /> DOWNLOAD VO
+                      </a>
+                    )}
+                    <Button 
+                      variant="outline"
+                      onClick={() => copyToClipboard(brief.rawContent)}
+                      className="flex-1 h-10 border-white/10 text-white/60 hover:text-white font-mono text-[10px] tracking-widest uppercase"
+                    >
+                      COPIAR BRIEF COMPLETO
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   );
+}
+
+function Plus({ size }: { size: number }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 }

@@ -43,6 +43,8 @@ export function Competidores() {
   const [transcribeMsg, setTranscribeMsg] = useState<{id: number; msg: string} | null>(null);
 
   const brechasStream = useAccaiStream();
+  const estructuraStream = useAccaiStream();
+  const [analyzingReelId, setAnalyzingReelId] = useState<number | null>(null);
 
   const handleSaveCompetitor = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -315,23 +317,51 @@ export function Competidores() {
                 sortedReels.map((reel, idx) => {
                   const comp = competitors.find(c => c.id === reel.competitorId);
                   return (
-                    <tr key={reel.id} className={idx % 2 === 0 ? "bg-[#0D0D0D]" : "bg-[#111111]"}>
-                      <td className="py-4 px-6 border-b border-[#1A1A1A]">{comp?.handle || `ID: ${reel.competitorId}`}</td>
-                      <td className="py-4 px-6 border-b border-[#1A1A1A] max-w-[150px] truncate" title={reel.tema}>{reel.tema}</td>
-                      <td className="py-4 px-6 border-b border-[#1A1A1A] max-w-[200px] truncate text-[#666666]" title={reel.hook}>{reel.hook}</td>
-                      <td className="py-4 px-6 border-b border-[#1A1A1A]">{reel.viewsApprox?.toLocaleString() || "-"}</td>
-                      <td className="py-4 px-6 border-b border-[#1A1A1A]">
-                        <span className={`px-2 py-1 text-[10px] uppercase font-bold tracking-wider ${getEngagementBadge(reel.engagementLevel)}`}>
-                          {reel.engagementLevel}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 border-b border-[#1A1A1A] text-[#666666]">{reel.anguloDetectado || "-"}</td>
-                      <td className="py-4 px-6 border-b border-[#1A1A1A]">
-                        <button onClick={() => deleteReel.mutate({ id: reel.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListCompetitorReelsQueryKey() }) })} className="text-[#666666] hover:text-[#FF2D20] transition-colors">
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
+                    <React.Fragment key={reel.id}>
+                      <tr className={idx % 2 === 0 ? "bg-[#0D0D0D]" : "bg-[#111111]"}>
+                        <td className="py-4 px-6 border-b border-[#1A1A1A]">{comp?.handle || `ID: ${reel.competitorId}`}</td>
+                        <td className="py-4 px-6 border-b border-[#1A1A1A] max-w-[150px] truncate" title={reel.tema}>{reel.tema}</td>
+                        <td className="py-4 px-6 border-b border-[#1A1A1A] max-w-[200px] truncate text-[#666666]" title={reel.hook}>{reel.hook}</td>
+                        <td className="py-4 px-6 border-b border-[#1A1A1A]">{reel.viewsApprox?.toLocaleString() || "-"}</td>
+                        <td className="py-4 px-6 border-b border-[#1A1A1A]">
+                          <span className={`px-2 py-1 text-[10px] uppercase font-bold tracking-wider ${getEngagementBadge(reel.engagementLevel)}`}>
+                            {reel.engagementLevel}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 border-b border-[#1A1A1A] text-[#666666]">
+                          <div className="flex items-center gap-3">
+                            <span className="truncate max-w-[80px]">{reel.anguloDetectado || "-"}</span>
+                            {reel.transcripcion && (
+                              <button
+                                onClick={() => handleAnalyzeEstructura(reel)}
+                                className="text-[#0C2DF5] hover:text-white font-mono text-[10px] uppercase tracking-wider underline underline-offset-4"
+                              >
+                                ESTRUCTURA
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6 border-b border-[#1A1A1A]">
+                          <button onClick={() => deleteReel.mutate({ id: reel.id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListCompetitorReelsQueryKey() }) })} className="text-[#666666] hover:text-[#FF2D20] transition-colors">
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                      {analyzingReelId === reel.id && (estructuraStream.isStreaming || estructuraStream.response) && (
+                        <tr className="bg-[#080808]">
+                          <td colSpan={7} className="px-6 py-6 border-b border-[#0C2DF5]/30">
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="text-[#0C2DF5] font-mono text-xs uppercase tracking-widest">// ARQUITECTURA DETECTADA</div>
+                              <button onClick={() => { setAnalyzingReelId(null); estructuraStream.clear(); }} className="text-[#666666] hover:text-white font-mono text-xs">✕</button>
+                            </div>
+                            <div className="font-mono text-sm whitespace-pre-wrap leading-relaxed text-[#F0F0F0]">
+                              {estructuraStream.response}
+                              {estructuraStream.isStreaming && <span className="text-[#0C2DF5] animate-pulse ml-1">_</span>}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}

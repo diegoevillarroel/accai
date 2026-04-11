@@ -78,11 +78,24 @@ async function buildContext(): Promise<string> {
     firmaCount[r.firma] = (firmaCount[r.firma] ?? 0) + 1;
   }
 
+  const topAngles = Object.entries(anguloCount)
+    .sort((a, b) => {
+      const avgA = reels.filter(r => r.angulo === a[0]).reduce((s, r) => s + r.savesPct, 0) / (anguloCount[a[0]] || 1);
+      const avgB = reels.filter(r => r.angulo === b[0]).reduce((s, r) => s + r.savesPct, 0) / (anguloCount[b[0]] || 1);
+      return avgB - avgA;
+    })
+    .slice(0, 2);
+
   return `
 [CONTEXTO VILLACLUB LIVE]
 
 ACCOUNT SNAPSHOT (más reciente):
 ${latestSnapshot[0] ? `Views: ${latestSnapshot[0].views} | Seguidores ganados: ${latestSnapshot[0].followersGained} | Visitas al perfil: ${latestSnapshot[0].profileVisits} | Conversión: ${latestSnapshot[0].conversionPct.toFixed(1)}%` : "Sin datos"}
+
+VALIDACIÓN DE RETENCIÓN (Benchmarks):
+- Ángulos que más SAVES generan: ${topAngles.map(a => `${a[0]}`).join(", ")}
+- Promedio de Saves en "CONVERTIDOR": ${(reels.filter(r => r.firma === "CONVERTIDOR").reduce((s, r) => s + r.savesPct, 0) / (firmaCount["CONVERTIDOR"] || 1)).toFixed(2)}%
+- Promedio de Saves en "VIRAL": ${(reels.filter(r => r.firma === "VIRAL").reduce((s, r) => s + r.savesPct, 0) / (firmaCount["VIRAL"] || 1)).toFixed(2)}%
 
 ÚLTIMOS 30 REELS:
 ${reels.map((r) => `- ${r.fecha} | ${r.tema} | ${r.angulo} | Views: ${r.views} | SavesPct: ${r.savesPct.toFixed(1)}% | S/1K: ${r.savesPer1k.toFixed(2)} | Firma: ${r.firma}`).join("\n")}
@@ -155,13 +168,71 @@ REGLAS ABSOLUTAS:
 7. Si la pregunta requiere análisis de más de 5 líneas: responde con diagnóstico corto + "Abre AUTOPSIA" o "Abre BRIEF" según corresponda.
 8. Nunca digas "no tengo suficiente data". Usa lo que hay y sé definitivo.`;
 
+const BRIEF_PARSER_PROMPT = `
+Cada output DEBE seguir este formato exacto para ser parseado:
+
+[VOICEOVER]
+(Texto exacto para ElevenLabs)
+[/VOICEOVER]
+
+[VISUAL_DIRECTION]
+(Instrucciones visuales)
+[/VISUAL_DIRECTION]
+
+[SUBTITLE_CUES]
+(Frases clave para subtítulos)
+[/SUBTITLE_CUES]
+
+[HOOK]
+(Hook de 3 segundos)
+[/HOOK]
+
+[CTA]
+(Cierre con link villaclub.vip/pagar)
+[/CTA]
+`;
+
 const MODE_PROMPTS: Record<string, string> = {
   AUTOPSIA: "Modo AUTOPSIA. Analiza este reel específico contra el historial completo. Identifica exactamente qué combinación de variables (hook, ángulo, formato, tema, timing) produjo el resultado. Determina si es replicable y cómo, sin repetir el tema. Output: diagnóstico de por qué funcionó o falló + 2 conceptos derivados listos para ejecutar.",
-  BRIEF: "Modo BRIEF. Con el contexto de la semana y el historial de rendimiento, genera exactamente 3 conceptos de video. Cada uno: Hook (primeros 3 segundos exactos — lo que digo y lo que se ve), Ángulo (cuál de los 4), Estructura (qué mostrar, qué decir, en qué orden), CTA específico. Evita temas ya cubiertos en los últimos 30 días según el contexto.",
+  BRIEF: `Modo BRIEF — ESTRUCTURA DE PRODUCCIÓN.
+BRIEF output must have these exact sections:
+- VOICEOVER (for ElevenLabs): exact words, cold authority tone, no filler, max 120 words for a 35s clip.
+- VISUAL DIRECTION: what clips/screenrecording to show during each sentence of the voiceover.
+- SUBTITLE CUES: key phrases to emphasize as centered subtitles on screen.
+- HOOK (first 3 seconds isolated): standalone, testable as a Threads post before producing.
+- CTA (final 5 seconds): exact words, always ends pointing to villaclub.vip/pagar.
+
+Voice constraints for ALL voiceover output:
+- Affirmations without hedging.
+- At least one number or concrete data point.
+- Venezuelan market context.
+- Never: "escala", "comunidad", "estrategias probadas", income promises without visible process.
+
+${BRIEF_PARSER_PROMPT}`,
+  ESTRATEGIA: "Modo ESTRATEGIA. Given the last 30 days of reel performance data (saves_per_1k, engagement by angulo, follower growth from account_snapshots), output a prioritized content plan for the next 7 days. Format: which 4 angles to use, in what order, with the specific hook concept for each. Base decisions only on what has highest saves_per_1k in the reels table. No general advice. Pure data-driven sequencing.",
+  WEEKLY_BRIEF: `Modo BRIEF SEMANAL. Analiza los últimos 7 días de rendimiento (saves, reach, conversiones a DM).
+REGLA DE SALIDA: 5-8 líneas máximo. Sin narrativa.
+1. DIAGNÓSTICO: Qué funcionó y qué falló (frío).
+2. PRIORIDAD: Tipo de pieza a priorizar esta semana (Autoridad/Confianza/Conversión).
+3. TESTEO: 3 ángulos de hook específicos para probar.
+Mantenlo quirúrgico. Solo datos y dirección.`,
   DIAGNOSTICO: "Modo DIAGNÓSTICO. Analiza el rendimiento de los últimos 7 días en orden estricto: Hook → Ángulo → Distribución → Oferta. Identifica el bottleneck real. No menciones el siguiente nivel hasta resolver el anterior. Una acción concreta por nivel de diagnóstico.",
   COMPETENCIA: "Modo COMPETENCIA. Analiza los videos de los competidores seleccionados contra los de Diego. Identifica: 1) qué temas cubren que Diego no, 2) qué ángulos tienen mayor engagement en el mercado VE actualmente, 3) qué vacíos estratégicos existen que nadie está cubriendo. Output: mapa de brechas + 2 ataques concretos para los próximos 14 días.",
   "FUNNEL CHECK": "Modo FUNNEL CHECK. Evalúa el mix de contenido de las últimas 2 semanas. Clasifica cada reel en: Autoridad (instalar quién es Diego), Confianza (prueba y casos), Conversión (activar compra). Determina el porcentaje actual en cada fase. El balance objetivo es 40% Autoridad / 35% Confianza / 25% Conversión para fase de crecimiento. Indica desequilibrio y qué tipo de pieza producir para corregirlo.",
   CIERRE: "Modo CIERRE. Recibes un fragmento de conversación de DM o WhatsApp con un prospecto. Ejecuta: 1) Identifica el avatar (Buscador o Operador Estancado) y justifica en una línea. 2) Identifica la fase actual del cierre: Investigación / Apertura / Dolor / Gap / Calificación / Enrutamiento / Gameplan / Cierre. 3) Genera la respuesta exacta que Diego debe enviar — en su tono, con su vocabulario, lista para copiar y pegar. 4) Si el prospecto no está listo para cerrar, indica qué información extraer antes de avanzar. Tono: Diego Villarroel. Sin coaching, sin suavización, sin explicaciones innecesarias al prospecto.",
+  THREADS: `Modo THREADS. Genera exactly 1 disparo de Threads (operador statement).
+REGLAS:
+- 2-3 líneas máximo.
+- Golpe lógico/aritmético. Sin CTA.
+- No es una opinión, es una definición.
+- Tono: Dominante, preciso.`,
+  ESTRUCTURA: `Modo ESTRUCTURA. Analiza la transcripción de un competidor y extrae su arquitectura exacta.
+REGLAS DE SALIDA:
+1. HOOK: Tipo de apertura (ej: "Ataque al ego", "Dato contraintuitivo") + frase exacta.
+2. RETENCIÓN: Cuál es el mecanismo que mantiene el interés (ej: "Proceso acelerado", "Pantalla con números").
+3. CIERRE/CTA: Cómo termina y qué acción pide.
+4. PATRÓN: Por qué este video funcionó en su nicho.
+Sin redacción narrativa. Solo arquitectura.`,
   PATRONES: `Modo PATRONES. Analiza TODAS las transcripciones disponibles (propias y de competidores) cruzadas con métricas de engagement. Identifica:
 
 1. HOOKS QUE ABREN SAVES: Las primeras 10 palabras de los reels con mayor save rate. ¿Qué patrón lingüístico comparten? ¿Pregunta, afirmación, número, contraste?

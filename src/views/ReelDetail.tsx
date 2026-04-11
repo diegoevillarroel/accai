@@ -108,8 +108,32 @@ export function ReelDetailPage() {
           ))}
         </div>
         {(response || isStreaming) && (
-          <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid var(--glass-border)", borderRadius: "6px", padding: "16px", fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "var(--font-body)" }}>
-            {response || <span className="loading-pulse">// analizando...</span>}
+          <div style={{ position: "relative" }}>
+            {response && !isStreaming && (
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(response || "");
+                  alert("Copiado.");
+                }}
+                style={{
+                  position: "absolute",
+                  top: "12px",
+                  right: "12px",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "var(--vc-accent)",
+                  fontFamily: "var(--font-display)",
+                  fontSize: "10px",
+                  letterSpacing: "0.1em"
+                }}
+              >
+                [ COPIAR ]
+              </button>
+            )}
+            <div style={{ background: "rgba(0,0,0,0.3)", border: "1px solid var(--glass-border)", borderRadius: "6px", padding: "16px", fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "var(--font-body)" }}>
+              {response || <span className="loading-pulse">// analizando...</span>}
+            </div>
           </div>
         )}
       </div>
